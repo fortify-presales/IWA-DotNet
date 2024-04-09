@@ -74,7 +74,7 @@ variables:
 - name: USE_FOD_OSS
   value: true
 - name: USE_FOD_DAST
-  value: true
+  value: false
 - name: USE_SCANCENTRAL_SAST
   value: false
 - name: USE_SCANCENTRAL_DAST
@@ -94,6 +94,22 @@ variables:
   value: $[replace(variables['Build.SourceBranch'], 'refs/heads/', '')]
 
 stages:
+
+- stage: ALMOctanePre
+  displayName: 'ALM Octane Pre'
+  jobs:
+  - job:
+    condition: always()
+    pool:
+      name: 'Fortify' # use named self-hosted pool 
+      #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+    steps:  
+    - task: octane-start-task@2
+      inputs:
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
+        WorkspaceList: '1003'
+        GithubRepositoryConnection: 'GitHub - kadraman'
+        CreatePipelineCheckbox: true
 
   #
   # Build and Unit Test the application components
@@ -241,3 +257,22 @@ stages:
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+- stage: ALMOctanePost
+  displayName: 'ALM Octane Post'
+  condition: always()
+  dependsOn: 
+    - ALMOctanePre
+    - DeployApp # just an example for better visualisation
+  jobs:
+  - job:
+    condition: always()
+    pool:
+      name: 'Fortify' # use named self-hosted pool 
+      #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+    steps:
+    - task: octane-end-task@2
+      inputs:
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
+        WorkspaceList: '1003'
+        GithubRepositoryConnection: 'GitHub - kadraman'

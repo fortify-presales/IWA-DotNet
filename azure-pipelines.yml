@@ -107,7 +107,7 @@ stages:
     - task: octane-start-task@2
       inputs:
         OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
-        WorkspaceList: '1003'
+        WorkspaceList: '79003'
         GithubRepositoryConnection: 'GitHub - kadraman'
         CreatePipelineCheckbox: true
 
@@ -274,5 +274,5 @@ stages:
     - task: octane-end-task@2
       inputs:
         OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
-        WorkspaceList: '1003'
+        WorkspaceList: '79003'
         GithubRepositoryConnection: 'GitHub - kadraman'

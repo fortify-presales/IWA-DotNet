@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2020 Micro Focus or one of its affiliates, a Micro Focus company
+  
+  Permission is hereby granted, free of charge, to any person obtaining a 
+  copy of this software and associated documentation files (the 
+  "Software"), to deal in the Software without restriction, including without 
+  limitation the rights to use, copy, modify, merge, publish, distribute, 
+  sublicense, and/or sell copies of the Software, and to permit persons to 
+  whom the Software is furnished to do so, subject to the following 
+  conditions:
+  
+  The above copyright notice and this permission notice shall be included 
+  in all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY 
+  KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+  WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
+  PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+  IN THE SOFTWARE.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:lang="http://www.springframework.org/schema/lang" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.2.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.2.xsd
+		http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang-4.2.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.2.xsd">
+	
+	<!--
+		This configuration file contains a basic configuration for submitting vulnerabilities
+		from FoD to Octane, and does not describe all possible configuration options. Please 
+		see FortifyBugTrackerUtility documentation for more information about the various 
+		configuration components and properties. 
+	 -->
+	
+	<!-- 
+		You can override any of the below on the command line, e.g.
+
+		>FortifyBugTrackerUtility.bat -configFile .\FoDToOctane.xml -FoDClientId YOUR_CLIENT_ID -FoDClientSecret YOUR_CLIENT_SECRET -FoDReleaseId 1159568 \
+			-OctaneSharedSpaceUid 416002 -OctaneWorkspaceId 79003 -OctaneClientId YOUR_CLIENT_ID -OctaneClientSecret YOUR_CLIENT_SECRET
+	
+	-->
+	<util:map id="cliOptionsDefaultValues">
+		<entry key="FoDBaseUrl" value="https://ams.fortify.com" />
+		<!--entry key="FoDTenant" value="__FoDTenant__" /-->
+		<!--entry key="FoDClientId" value="__FoDClientId__" /-->
+		<!--entry key="FoDClientSecret" value="__FoDClientSecret__" /-->
+		<!--entry key="FoDReleaseId" value="__FoDReleaseId__" /-->
+		<!--entry key="FoDReleaseName" value="__FoDAppName:__FoDReleaseName__" /-->
+		<entry key="OctaneBaseUrl" value="https://almoctane-eur.saas.microfocus.com/" />
+		<!--entry key="OctaneSharedSpaceUid" value="416002" /-->
+		<!--entry key="OctaneWorkspaceId" value="79003" /-->	
+		<!--entry key="OctaneClientId" value="klee_api_key_n7gwqxprx5d6phly1py5lo5k1" /-->
+		<!--entry key="OctaneClientSecret" value="=15911815013918524016571K" /-->
+	</util:map>
+
+	<context:component-scan base-package="com.fortify.bugtracker.src.fod, com.fortify.bugtracker.tgt.octane"/>
+	
+	<bean class="com.fortify.bugtracker.src.fod.config.FoDSourceVulnerabilitiesConfiguration">	
+		<property name="filterStringForVulnerabilitiesToBeSubmitted">
+			<!--value>severityString:Critical|High+isSuppressed=false</value-->
+			<value>vulnId:995812b6-86cb-468b-87ff-579238b3d7fe</value>
+		</property>
+		
+		<!-- Note that previous versions of this sample used to store bug data as comments instead of using native bug links -->
+		<property name="addBugDataAsComment" value="false"/>
+		<property name="addNativeBugLink" value="true"/>
+		<property name="allowedBugTrackerTypes" value="None, Other"/>
+		
+		<property name="isVulnerabilityOpenExpression"><value><![CDATA[
+			closedStatus==false && isSuppressed==false && status!='Fix Validated'
+		]]></value></property>
+	</bean>
+	
+	<bean class="com.fortify.bugtracker.tgt.octane.config.OctaneTargetConfiguration">
+		<property name="groupTemplateExpression" value="${category}+${primaryLocationFull}"/>
+		
+		<property name="fields"><map>
+			<entry key="name" value="FoD Detected ${category} at ${primaryLocationFull}"/>
+			<entry key="description"><value><![CDATA[
+				<b>--- Changes to the description will be overwritten when FortifyBugTrackerUtility updates issues states ---</b><br/>
+				<table>
+					<tr><td>Category:</td><td>${category}</td></tr>
+					<tr><td>File Name:</td><td>${primaryLocationFull}</td></tr>
+				</table><br/>
+			]]></value></entry> 
+			<entry key="phase.type" value="phase"/>
+			<entry key="phase.name" value="New"/>
+			<entry key="parent.type" value="work_item"/>
+			<entry key="parent.name" value="Backlog"/>
+			<entry key="custom_subtype" value="Security"/>
+			<entry key="item_origin" value="Fortify"/>
+			<entry key="severity" value='${severityString}'/>
+			<!--entry key="detected_in_release" value="${appName}:{releaseName}"/-->
+			<entry key="detected_in_release" value="FVEDemoApp"/>
+		</map></property>
+		
+		<property name="appendedFields"><map>
+			<entry key="description"><value><![CDATA[
+				<table>
+					<tr><td>Id:</td><td>${id}</td></tr>
+					<tr><td>State:</td><td>${vulnState}</td></tr>
+					<tr><td>Line:</td><td>${lineNumber?:'Unknown'}</td></tr>
+					<tr><td>Link:</td><td><a href="${deepLink}">${deepLink}</a></td></tr>
+				</table><br/>
+			]]></value></entry> 
+		</map></property>
+		
+		<property name="fieldsToUpdateDuringStateManagement" value="description,detected_in_release"/>
+	
+		<property name="transitionsForOpeningIssue"><map>
+			<!-- Octane default workflow -->
+			<entry key="fields.phase.name matches 'Fixed'" value="Opened[Issue re-opened by FoDBugTrackerUtility]"/>
+		</map></property>
+		
+		<property name="transitionsForClosingIssue"><map>
+			<!-- Octane default workflow -->
+			<entry key="fields.phase.name matches 'New|Deferred'"><list>
+				<value>Opened[Intermediate transition performed by FortifyBugTrackerUtility]</value>
+				<value>Fixed[Intermediate transition performed by FortifyBugTrackerUtility]</value>
+				<value>Closed[Issue closed by FortifyBugTrackerUtility]</value>
+			</list></entry>
+			<entry key="fields.phase.name matches 'Opened'"><list>
+				<value>Fixed[Intermediate transition performed by FortifyBugTrackerUtility]</value>
+				<value>Closed[Issue closed by FortifyBugTrackerUtility]</value>
+			</list></entry>
+			<entry key="fields.phase.name matches 'Fixed'" value="Closed[Issue closed by FoDBugTrackerUtility]"/>
+		</map></property>
+	</bean>
+
+</beans>

@@ -41,17 +41,25 @@
 	 -->	
 	
 	<context:component-scan base-package="com.fortify.bugtracker.src.fod, com.fortify.bugtracker.tgt.ado"/>
+
+  <!-- 
+		You can override any of the below on the command line, e.g.
+
+		>FortifyBugTrackerUtility.bat -configFile .\FoDToADO.xml -FoDClientId YOUR_CLIENT_ID -FoDClientSecret YOUR_CLIENT_SECRET -FoDReleaseId 1159568 \
+			-ADOBaseUrl YOUR_ADO_URL -ADOProject YOUR_ADO_PROJECT -ADOPAT YOUR_ADO_PAT
 	
+	-->
+  
 	<util:map id="cliOptionsDefaultValues">
-		<entry key="FoDBaseUrl" value="__FoDBaseUrl__" />
-		<entry key="FoDTenant" value="__FoDTenant__" />
-		<entry key="FoDUsername" value="__FoDUsername__" />
-		<entry key="FoDClientId" value="__FoDClientId__" />
-		<entry key="FoDClientSecret" value="__FoDClientSecret__" /> 
-		<entry key="FoDReleaseId" value="__FoDReleaseId__" />
-		<entry key="ADOBaseUrl" value="__ADOBaseUrl__" />
-		<entry key="ADOProject" value="__ADOProject__" />
-		<entry key="ADOPAT" value="__ADOPAT__" />
+    <entry key="FoDBaseUrl" value="https://ams.fortify.com" />
+    <!--entry key="FoDTenant" value="__FoDTenant__" /-->
+    <!--entry key="FoDClientId" value="__FoDClientId__" /-->
+    <!--entry key="FoDClientSecret" value="__FoDClientSecret__" /-->
+    <!--entry key="FoDReleaseId" value="__FoDReleaseId__" /-->
+    <!--entry key="FoDReleaseName" value="__FoDAppName:__FoDReleaseName__" /-->
+    <!--entry key="ADOBaseUrl" value="__ADOBaseUrl__" /-->
+		<!--entry key="ADOProject" value="__ADOProject__" /-->
+    <!--entry key="ADOPAT" value="__ADOPAT__" /-->
 	</util:map>
 	
 	<bean class="com.fortify.bugtracker.src.fod.config.FoDSourceVulnerabilitiesConfiguration">	
@@ -61,11 +69,11 @@
 		
 		<!-- Note that previous versions of this sample used to store bug data as comments instead of using native bug links -->
 		<property name="addBugDataAsComment" value="false"/>
-		<property name="addNativeBugLink" value="false"/>
-		<property name="allowedBugTrackerTypes" value="Microsoft TFS / VSTS"/>
+		<property name="addNativeBugLink" value="true"/>
+		<property name="allowedBugTrackerTypes" value="None, Other"/>
 		
 		<property name="isVulnerabilityOpenExpression"><value><![CDATA[
-			closedStatus==false && isSuppressed==false
+			closedStatus==false && isSuppressed==false && status!='Fix Validated'
 		]]></value></property>
 	</bean>
 	
@@ -85,6 +93,7 @@
 			<entry key="Microsoft.VSTS.Common.Severity" value="${{'Critical':'1 - Critical','High':'2 - High','Medium':'3 - Medium','Low':'4 - Low'}.get(severityString)}"/>
 			<entry key="Microsoft.VSTS.TCM.ReproSteps" value="--- Changes to the description will be overwritten when FortifyBugTrackerUtility updates issues states ---\n\nCategory: ${category} at ${primaryLocationFull}"/>
 		</map></property>
+
 		<property name="appendedFields"><map>
 			<!--  Append individual issue data to the given field. 
 			      Note that the same field must exist in the fields property above -->
@@ -115,4 +124,5 @@
 			       value="Closed[Issue closed by FortifyBugTrackerUtility]" />
 		</map></property>
 	</bean>
+
 </beans>

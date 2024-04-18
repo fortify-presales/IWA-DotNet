@@ -52,12 +52,18 @@ variables:
   # For SSC:
   #   SSC_URL                       - SSC URL
   #   SSC_CI_TOKEN                  - SSC CIToken
-  #
+- #
+  # For Debricked:
+  #   DEBRICKED_TOKEN               - Debricked Access Token
+- #
   # For ScanCentral SAST:
   #   SCANCENTRAL_CLIENT_AUTH_TOKEN - ScanCentral SAST Client Authentication Token
   #
   # For ScanCentral DAST:
   #   Nothing Yet
+  #
+  # For Octane/ValueEdge
+  #   OCTANE_WORKSPACES             - List of target ALM Octane workspaces
   #
   # The pipeline job templates make use of the Fortify CLI tool (https://github.com/fortify/fcli) and Debricked CLI tool (https://github.com/debricked/cli)
   # There are tasks which make use of preview extensions (not published to the Azure DevOps marketplace) to install these tools included, e.g.:
@@ -72,6 +78,8 @@ variables:
 - name: USE_FOD_SAST
   value: true
 - name: USE_FOD_OSS
+  value: true
+- name: USE_DEBRICKED
   value: true
 - name: USE_FOD_DAST
   value: false
@@ -106,9 +114,9 @@ stages:
     steps:  
     - task: octane-start-task@2
       inputs:
-        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
-        WorkspaceList: '79003'
-        GithubRepositoryConnection: 'GitHub - kadraman'
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection-IWA-DotNet'
+        WorkspaceList: "$(OCTANE_WORKSPACES)"
+        GithubRepositoryConnection: 'GitHubServiceConnection-IWA-DotNet'
         CreatePipelineCheckbox: true
 
   #
@@ -122,6 +130,24 @@ stages:
     parameters:
         srcProject: 'InsecureWebApp/InsecureWebApp.csproj' 
         testProject: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
+        pool:
+            name: 'Fortify' # use named self-hosted pool 
+            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+  #
+  # Software Composition Analysis - OSS Scan with Debricked
+  #
+- stage: Debricked_OSS
+  displayName: 'Debricked OSS'
+  condition: eq(variables['USE_DEBRICKED'], 'true') 
+  dependsOn: 
+    - BuildAndUnitTest
+  jobs:
+    # Run Debricked OSS Scan on Project
+  - template: 'devops-integrations/azure-pipelines/templates/debricked-oss-scan.yml'
+    parameters:
+        workingDirectory: '.' 
+        debrickedToken: $(DEBRICKED_TOKEN)
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
@@ -273,6 +299,6 @@ stages:
     steps:
     - task: octane-end-task@2
       inputs:
-        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection'
-        WorkspaceList: '79003'
-        GithubRepositoryConnection: 'GitHub - kadraman'
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection-IWA-DotNet'
+        WorkspaceList: "$(OCTANE_WORKSPACES)"
+        GithubRepositoryConnection: 'GitHubServiceConnection-IWA-DotNet'

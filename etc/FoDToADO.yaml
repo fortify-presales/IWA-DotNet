@@ -1,5 +1,5 @@
 fod:
-  baseUrl: https://emea.fortify.com         # Base URL to connect to FoD
+  baseUrl: https://ams.fortify.com         # Base URL to connect to FoD
   #tenant:   MyTenant                        # FoD tenant
   #userName: MyUser                          # FoD user name
   #password: MyPAT                           # FoD Personal Access Token (recommended) or password

@@ -8,8 +8,8 @@ trigger:
     include:
     - main
     - develop
-    - features/*
-    - releases/*
+    - feature/*
+    - release/*
     exclude:
     - experimental/*
   paths:
@@ -52,10 +52,10 @@ variables:
   # For SSC:
   #   SSC_URL                       - SSC URL
   #   SSC_CI_TOKEN                  - SSC CIToken
-- #
+  #
   # For Debricked:
   #   DEBRICKED_TOKEN               - Debricked Access Token
-- #
+  #
   # For ScanCentral SAST:
   #   SCANCENTRAL_CLIENT_AUTH_TOKEN - ScanCentral SAST Client Authentication Token
   #

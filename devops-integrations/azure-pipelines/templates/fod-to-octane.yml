@@ -13,6 +13,8 @@ parameters:
   default: 'x64'
 - name: fodBaseUrl
   default: 'https://ams.fortify.com'
+- name: fodApiUrl
+  default: 'https://api.ams.fortify.com'
 - name: fodTenant
 - name: fodClientId
 - name: fodClientSecret
@@ -80,7 +82,6 @@ jobs:
       FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
-      FOD_PARENT_RELEASE_NAME: ${{ parameters.fodParentReleaseName }}        
   - task: PowerShell@2
     displayName: 'Run FortifyBugTrackerUtility'
     inputs:

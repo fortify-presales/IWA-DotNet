@@ -297,7 +297,7 @@ stages:
 - stage: FoD_Issues_To_Octane
   displayName: 'FoD Issues to Octane'
   dependsOn: 
-    - DeployApp
+    - BuildAndUnitTest
   jobs:
   - template: 'devops-integrations/azure-pipelines/templates/fod-to-octane.yml'
     parameters:

@@ -47,6 +47,7 @@ variables:
   # For FoD:
   #   FOD_BASE_URL                  - FoD Base Url, e.g. "https://ams.fortify.com"
   #   FOD_API_URL                   - FoD API URL, e.g. "https://api.ams.fortify.com"
+  #   FOD_TENANT                    - FoD Tenant Name
   #   FOD_CLIENT_ID                 - FoD API Client Id
   #   FOD_CLIENT_SECRET             - FoD API Client Secret
   #
@@ -303,6 +304,7 @@ stages:
     parameters:
         workingDirectory: '.' # could be project directory with specific config file
         fodBaseUrl: $(FOD_BASE_URL)
+        fodTenant: $(FOD_TENANT)
         fodClientId: $(FOD_CLIENT_ID)
         fodClientSecret: $(FOD_CLIENT_SECRET)
         fodAppName: "$(FORTIFY_APP_NAME)"

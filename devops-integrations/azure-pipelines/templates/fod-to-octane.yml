@@ -87,7 +87,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        WriteHost "##[command]FortifyBugTrackerUtility -configFile .\etc\FoDToOctane.xml -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" -FoDReleaseId ""${env:FOD_RELEASE_ID}"" -OctaneBaseUrl ""${env:OCTANE_BASE_URL}"" -OctaneSharedSpaceUid ""${env:OCTANE_SHARED_SPACE_ID}"" -OctaneWorkspaceId ""${env:OCTANE_WORKSPACE_ID}"" -OctaneClientId ""${env:OCTANE_CLIENT_ID}"" -OctaneClientSecret ""${env:OCTANE_CLIENT_SECRET}"" "
+        Write-Host "##[command]FortifyBugTrackerUtility -configFile .\etc\FoDToOctane.xml -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" -FoDReleaseId ""${env:FOD_RELEASE_ID}"" -OctaneBaseUrl ""${env:OCTANE_BASE_URL}"" -OctaneSharedSpaceUid ""${env:OCTANE_SHARED_SPACE_ID}"" -OctaneWorkspaceId ""${env:OCTANE_WORKSPACE_ID}"" -OctaneClientId ""${env:OCTANE_CLIENT_ID}"" -OctaneClientSecret ""${env:OCTANE_CLIENT_SECRET}"" "
         FortifyBugTrackerUtility -configFile .\etc\FoDToOctane.xml `
             -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" `
             -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" `

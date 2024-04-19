@@ -86,7 +86,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        java -jar .\lib\FortifyBugTrackerUtility-4.13.jar -configFile .\etc\FoDToOctane.xml `
+        FortifyBugTrackerUtility -configFile .\etc\FoDToOctane.xml `
             -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" `
             -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" `
             -FoDReleaseId ""${env:FOD_RELEASE_ID}"" `

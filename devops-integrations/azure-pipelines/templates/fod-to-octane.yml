@@ -1,0 +1,119 @@
+# File: templates/fod-to-octane.yml
+
+# defaults for any parameters that aren't specified
+parameters: 
+- name: 'pool'
+  type: object
+  default: {}
+- name: workingDirectory
+  default: ''
+- name: jdkVersion
+  default: '17'
+- name: jdkArch
+  default: 'x64'
+- name: fodBaseUrl
+  default: 'https://ams.fortify.com'
+- name: fodApiUrl
+  default: 'https://api.ams.fortify.com'
+- name: fodTenant
+- name: fodClientId
+- name: fodClientSecret
+- name: fodAppName
+- name: fodReleaseName
+- name: octaneBaseUrl
+  default: 'https://almoctane-ams.saas.microfocus.com/'
+- name: octaneSharedSpaceId
+- name: octaneWorkspaceId
+- name: octaneClientId
+- name: octaneClientSecret
+
+jobs:
+- job: FoDIssuesToOctaneDefects
+  pool: ${{ parameters.pool }}
+  steps:
+  - task: JavaToolInstaller@0
+    inputs:
+      versionSpec: ${{ parameters.jdkVersion }}
+      jdkArchitectureOption: ${{ parameters.jdkArch }}
+      jdkSourceOption: PreInstalled
+  - task: FcliInstaller@0
+    inputs:
+      version: 'latest'
+  - task: PowerShell@2
+    displayName: 'Install FortifyBugTrackerUtility'
+    inputs:
+      targetType: 'inline'
+      script: |
+        fcli tool fbtu install -y -d $(Build.SourcesDirectory)\ftbu
+        Write-Host "##vso[task.prependpath]$(Build.SourcesDirectory)\ftbu\bin"
+  - task: PowerShell@2
+    displayName: 'FoD Check Release'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $App="${env:FOD_APP_NAME}"
+        $Rel="${env:FOD_RELEASE_NAME}"
+        if (${env:FORTIFY_APP_NAME_OVERRIDE}) {
+          Write-Host "##[debug]Overriding FORTIFY_APP_NAME to ${env:FORTIFY_APP_NAME_OVERRIDE}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_APP_NAME]${env:FORTIFY_APP_NAME_OVERRIDE}"
+          $App="${env:FORTIFY_APP_NAME_OVERRIDE}"
+        } else {
+          Write-Host "##[command]Using FORTIFY_APP_NAME ${App}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_APP_NAME]${App}"
+        }
+        if (${env:FORTIFY_RELEASE_NAME_OVERRIDE}) {
+          Write-Host "##[debug]Overriding FORTIFY_RELEASE_NAME to ${env:FORTIFY_RELEASE_NAME_OVERRIDE}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME]${env:FORTIFY_RELEASE_NAME_OVERRIDE}"
+          $Rel=${env:FORTIFY_RELEASE_NAME_OVERRIDE}
+        } else {
+          Write-Host "##[debug]Using FORTIFY_RELEASE_NAME ${Rel}"
+          Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME]${Rel}"
+        }
+        Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
+        fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
+        Write-Host "##[command]fcli fod release get ""${App}:${Rel}"" -o expr=""{releaseId}"" --session azure-pipelines"
+        $RelId=(fcli fod release get "${App}:${Rel}" -o expr="{releaseId}" --session azure-pipelines)
+        Write-Host "##[debug]Setting fodReleaseId to $RelId"
+        Write-Host "##vso[task.setvariable variable=fodReleaseId]$RelId"
+      showWarnings: true
+    env:
+      FOD_API_URL: ${{ parameters.fodApiUrl }}
+      FOD_CLIENT_ID: ${{ parameters.fodClientId }}
+      FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
+      FOD_APP_NAME: ${{ parameters.fodAppName }}
+      FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
+  - task: PowerShell@2
+    displayName: 'Run FortifyBugTrackerUtility'
+    inputs:
+      targetType: 'inline'
+      script: |
+        Write-Host "Running in: $(Build.SourcesDirectory)"
+        #Write-Host "##[command]FortifyBugTrackerUtility -configFile $(Build.SourcesDirectory)\etc\FoDToOctane.xml -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" -FoDReleaseId ""${env:FOD_RELEASE_ID}"" -OctaneBaseUrl ""${env:OCTANE_BASE_URL}"" -OctaneSharedSpaceUid ""${env:OCTANE_SHARED_SPACE_ID}"" -OctaneWorkspaceId ""${env:OCTANE_WORKSPACE_ID}"" -OctaneClientId ""${env:OCTANE_CLIENT_ID}"" -OctaneClientSecret ""${env:OCTANE_CLIENT_SECRET}"" "
+        #FortifyBugTrackerUtility -configFile $(Build.SourcesDirectory)\etc\FoDToOctane.xml
+        Write-Host "##[command]java -jar $(Build.SourcesDirectory)\lib\FortifyBugTrackerUtility-4.13-SNAPSHOT.jar -configFile $(Build.SourcesDirectory)\etc\FoDToOctane.xml -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" -FoDReleaseId ""${env:FOD_RELEASE_ID}"" -OctaneBaseUrl ""${env:OCTANE_BASE_URL}"" -OctaneSharedSpaceUid ""${env:OCTANE_SHARED_SPACE_ID}"" -OctaneWorkspaceId ""${env:OCTANE_WORKSPACE_ID}"" -OctaneClientId ""${env:OCTANE_CLIENT_ID}"" -OctaneClientSecret ""${env:OCTANE_CLIENT_SECRET}"" "
+        java -jar $(Build.SourcesDirectory)\lib\FortifyBugTrackerUtility-4.13-SNAPSHOT.jar -configFile $(Build.SourcesDirectory)\etc\FoDToOctane.xml `
+            -FoDBaseUrl ""${env:FOD_BASE_URL}"" -FoDTenant ""${env:FOD_TENANT}"" `
+            -FoDClientId ""${env:FOD_CLIENT_ID}"" -FoDClientSecret ""${env:FOD_CLIENT_SECRET}"" `
+            -FoDReleaseId ""${env:FOD_RELEASE_ID}"" `
+            -OctaneBaseUrl ""${env:OCTANE_BASE_URL}"" `
+            -OctaneSharedSpaceUid ""${env:OCTANE_SHARED_SPACE_ID}"" -OctaneWorkspaceId ""${env:OCTANE_WORKSPACE_ID}"" `
+            -OctaneClientId ""${env:OCTANE_CLIENT_ID}"" -OctaneClientSecret ""${env:OCTANE_CLIENT_SECRET}""
+      workingDirectory: ${{ parameters.workingDirectory }}
+    env:
+      FOD_BASE_URL: ${{ parameters.fodBaseUrl }}
+      FOD_TENANT: ${{ parameters.fodTenant }}
+      FOD_CLIENT_ID: ${{ parameters.fodClientId }}
+      FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }} 
+      FOD_RELEASE_ID: $(fodReleaseId)
+      OCTANE_BASE_URL: ${{ parameters.octaneBaseUrl }}
+      OCTANE_SHARED_SPACE_ID: ${{ parameters.octaneSharedSpaceId }}
+      OCTANE_WORKSPACE_ID: ${{ parameters.octaneWorkspaceId }}
+      OCTANE_CLIENT_ID: ${{ parameters.octaneClientId }}
+      OCTANE_CLIENT_SECRET: ${{ parameters.octaneClientSecret }}
+
+
+
+
+
+
+

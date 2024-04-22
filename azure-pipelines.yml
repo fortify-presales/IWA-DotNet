@@ -8,8 +8,8 @@ trigger:
     include:
     - main
     - develop
-    - features/*
-    - releases/*
+    - feature/*
+    - release/*
     exclude:
     - experimental/*
   paths:
@@ -45,7 +45,9 @@ variables:
   # In order for the pipeline to execute successfully you should create and set the following variables in the Pipeline UI.
   # 
   # For FoD:
+  #   FOD_BASE_URL                  - FoD Base Url, e.g. "https://ams.fortify.com"
   #   FOD_API_URL                   - FoD API URL, e.g. "https://api.ams.fortify.com"
+  #   FOD_TENANT                    - FoD Tenant Name
   #   FOD_CLIENT_ID                 - FoD API Client Id
   #   FOD_CLIENT_SECRET             - FoD API Client Secret
   #
@@ -53,11 +55,22 @@ variables:
   #   SSC_URL                       - SSC URL
   #   SSC_CI_TOKEN                  - SSC CIToken
   #
+  # For Debricked:
+  #   DEBRICKED_TOKEN               - Debricked Access Token
+  #
   # For ScanCentral SAST:
   #   SCANCENTRAL_CLIENT_AUTH_TOKEN - ScanCentral SAST Client Authentication Token
   #
   # For ScanCentral DAST:
   #   Nothing Yet
+  #
+  # For Octane/ValueEdge
+  #   OCTANE_BASE_URL               - ALM Octane/ValueEdge Base Url, e.g. "https://almoctane-ams.saas.microfocus.com/"               
+  #   OCTANE_CLIENT_ID              - ALM Octane/ValueEdge API Client Id
+  #   OCTANE_CLIENT_SECRET          - ALM Octane/ValueEdge API Client Secret
+  #   OCTANE_WORKSPACES             - List of target ALM Octane/ValueEdge workspaces
+  #   OCTANE_SHARED_SPACE_ID        - ALM Octane/ValueEdge Shared Space Id
+  #   OCTANE_WORKSPACE_ID           - ALM Octane/ValueEdge Shared SpaceWorkspace Id
   #
   # The pipeline job templates make use of the Fortify CLI tool (https://github.com/fortify/fcli) and Debricked CLI tool (https://github.com/debricked/cli)
   # There are tasks which make use of preview extensions (not published to the Azure DevOps marketplace) to install these tools included, e.g.:
@@ -72,9 +85,11 @@ variables:
 - name: USE_FOD_SAST
   value: true
 - name: USE_FOD_OSS
+  value: false
+- name: USE_DEBRICKED
   value: true
 - name: USE_FOD_DAST
-  value: true
+  value: false
 - name: USE_SCANCENTRAL_SAST
   value: false
 - name: USE_SCANCENTRAL_DAST
@@ -95,6 +110,22 @@ variables:
 
 stages:
 
+- stage: ALMOctanePre
+  displayName: 'ALM Octane Pre'
+  jobs:
+  - job:
+    condition: always()
+    pool:
+      name: 'Fortify' # use named self-hosted pool 
+      #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+    steps:  
+    - task: octane-start-task@2
+      inputs:
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection-IWA-DotNet'
+        WorkspaceList: "$(OCTANE_WORKSPACES)"
+        GithubRepositoryConnection: 'GitHubServiceConnection-IWA-DotNet'
+        CreatePipelineCheckbox: true
+
   #
   # Build and Unit Test the application components
   #
@@ -106,6 +137,24 @@ stages:
     parameters:
         srcProject: 'InsecureWebApp/InsecureWebApp.csproj' 
         testProject: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
+        pool:
+            name: 'Fortify' # use named self-hosted pool 
+            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+  #
+  # Software Composition Analysis - OSS Scan with Debricked
+  #
+- stage: Debricked_OSS
+  displayName: 'Debricked OSS'
+  condition: eq(variables['USE_DEBRICKED'], 'true') 
+  dependsOn: 
+    - BuildAndUnitTest
+  jobs:
+    # Run Debricked OSS Scan on Project
+  - template: 'devops-integrations/azure-pipelines/templates/debricked-oss-scan.yml'
+    parameters:
+        workingDirectory: '.' 
+        debrickedToken: $(DEBRICKED_TOKEN)
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
@@ -185,8 +234,8 @@ stages:
 - stage: DeployApp
   displayName: 'Deploy Application'
   dependsOn: 
-    - BuildAndUnitTest
-    - FoD_OSS # just an example for better visualisation
+    - FoD_SAST
+#   - ScanCentral_DAST
   jobs: 
     # This is a simulated deployment and does nothing
   - template: 'devops-integrations/azure-pipelines/templates/simulate-deployment.yml'
@@ -241,3 +290,49 @@ stages:
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+  #
+  # Create and snychronize FoD Issues to ALM Octane/ValueEdge
+  #
+- stage: FoD_Issues_To_Octane
+  displayName: 'FoD Issues to Octane'
+  dependsOn: 
+    - FOD_SAST
+    #- FOD_DAST
+  jobs:
+  - template: 'devops-integrations/azure-pipelines/templates/fod-to-octane.yml'
+    parameters:
+        workingDirectory: '.' # could be project directory with specific config file
+        fodBaseUrl: $(FOD_BASE_URL)
+        fodTenant: $(FOD_TENANT)
+        fodClientId: $(FOD_CLIENT_ID)
+        fodClientSecret: $(FOD_CLIENT_SECRET)
+        fodAppName: "$(FORTIFY_APP_NAME)"
+        fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
+        octaneBaseUrl: $(OCTANE_BASE_URL)
+        octaneSharedSpaceId: $(OCTANE_SHARED_SPACE_ID)
+        octaneWorkspaceId: $(OCTANE_WORKSPACE_ID)
+        octaneClientId: $(OCTANE_CLIENT_ID)
+        octaneClientSecret: $(OCTANE_CLIENT_SECRET)
+        pool:
+            name: 'Fortify' # use named self-hosted pool 
+            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+
+- stage: ALMOctanePost
+  displayName: 'ALM Octane Post'
+  condition: always()
+  dependsOn: 
+    - ALMOctanePre
+    - FoD_Issues_To_Octane
+  jobs:
+  - job:
+    condition: always()
+    pool:
+      name: 'Fortify' # use named self-hosted pool 
+      #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+    steps:
+    - task: octane-end-task@2
+      inputs:
+        OctaneServiceConnection: 'AzureExtensionPipelineServiceConnection-IWA-DotNet'
+        WorkspaceList: "$(OCTANE_WORKSPACES)"
+        GithubRepositoryConnection: 'GitHubServiceConnection-IWA-DotNet'

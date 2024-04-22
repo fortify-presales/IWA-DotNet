@@ -83,11 +83,11 @@ variables:
   
   # Change these variables depending on which parts of the pipeline to execute:
 - name: USE_FOD_SAST
-  value: false
+  value: true
 - name: USE_FOD_OSS
   value: false
 - name: USE_DEBRICKED
-  value: false
+  value: true
 - name: USE_FOD_DAST
   value: false
 - name: USE_SCANCENTRAL_SAST
@@ -234,8 +234,8 @@ stages:
 - stage: DeployApp
   displayName: 'Deploy Application'
   dependsOn: 
-    - BuildAndUnitTest
-    - FoD_OSS # just an example for better visualisation
+    - FoD_SAST
+#   - ScanCentral_DAST
   jobs: 
     # This is a simulated deployment and does nothing
   - template: 'devops-integrations/azure-pipelines/templates/simulate-deployment.yml'
@@ -297,7 +297,7 @@ stages:
 - stage: FoD_Issues_To_Octane
   displayName: 'FoD Issues to Octane'
   dependsOn: 
-    - BuildAndUnitTest
+    - FOD_SAST
   jobs:
   - template: 'devops-integrations/azure-pipelines/templates/fod-to-octane.yml'
     parameters:
@@ -322,7 +322,6 @@ stages:
   condition: always()
   dependsOn: 
     - ALMOctanePre
-    - DeployApp # just an example for better visualisation
     - FoD_Issues_To_Octane
   jobs:
   - job:

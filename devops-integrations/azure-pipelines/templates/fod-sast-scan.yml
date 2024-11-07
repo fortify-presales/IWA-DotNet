@@ -37,6 +37,11 @@ jobs:
   - task: UseDotNet@2
     inputs:
       version: ${{ parameters.dotnetVersion }}
+  - task: BatchScript@1
+    displayName: 'Set Visual Studio Environment'
+    inputs:
+      filename: ${{ format('C:\Program Files\Microsoft Visual Studio\{0}\{1}\Common7\Tools\VsDevCmd.bat', parameters.vsVersion, parameters.vsEdition) }}
+      modifyEnvironment: true
   - task: JavaToolInstaller@0
     inputs:
       versionSpec: ${{ parameters.jdkVersion }}
@@ -46,7 +51,7 @@ jobs:
     inputs:
       version: 'latest'
   - task: PowerShell@2
-    displayName: 'FoD Check Release'
+    displayName: 'FoD Setup Release'
     inputs:
       targetType: 'inline'
       script: |
@@ -72,8 +77,9 @@ jobs:
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
         Write-Host "##[command]fcli fod release list --app "${App}" --session azure-pipelines"
         fcli fod release list --app "${App}" --session azure-pipelines
-        Write-Host "##[command]fcli fod release create ""${App}:${Rel}"" --description ""Created automatically from Azure DevOps"" --copy-from ""${App}:${env:FOD_PARENT_RELEASE_NAME}"" --status Development --skip-if-exists -o expr=""{releaseId}"" --session azure-pipelines"
-        $RelId=(fcli fod release create "${App}:${Rel}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists -o expr="{releaseId}" --session azure-pipelines)
+        Write-Host "##[command]fcli fod action run setup-release --release ""${App}:${Rel}"" --description ""Created automatically from Azure DevOps"" --copy-from ""${App}:${env:FOD_PARENT_RELEASE_NAME}"" --status Development --skip-if-exists -o expr=""{releaseId}"" --session azure-pipelines"
+        fcli fod action run setup-release --release "${App}:${Rel}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists --session azure-pipelines)
+        $RelId=(fcli fod release get "${App}:${Rel}" -o expr="{releaseId}" --session azure-pipelines)
         Write-Host "##[debug]Setting fodReleaseId to $RelId"
         Write-Host "##vso[task.setvariable variable=fodReleaseId]$RelId"
         fcli tool sc-client install -y -d $(Build.SourcesDirectory)\sc-client
@@ -86,31 +92,28 @@ jobs:
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
       FOD_PARENT_RELEASE_NAME: ${{ parameters.fodParentReleaseName }}
-  - task: BatchScript@1
-    displayName: 'Set Visual Studio environment'
-    inputs:
-      filename: ${{ format('C:\Program Files\Microsoft Visual Studio\{0}\{1}\Common7\Tools\VsDevCmd.bat', parameters.vsVersion, parameters.vsEdition) }}
-      modifyEnvironment: true
-  - task: PowerShell@2
-    displayName: 'FoD SAST Scan'
-    inputs:
-      targetType: 'inline'
-      script: |
-        Write-Host "##[command]scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}"
-        scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}
-        Write-Host "##[command]fcli fod sast-scan start --release $(fodReleaseId) --notes ""${env:FOD_SCAN_NOTES}"" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines"
-        fcli fod sast-scan start --release $(fodReleaseId) --notes "${env:FOD_SCAN_NOTES}" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines
-        $ScanId=(fcli util var get ::curScan::)
-        Write-Host "##[debug]Scan Id is: $ScanId"
-        Write-Host "##vso[task.setvariable variable=fodScanId]$ScanId"
-        Write-Host "##[command]fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines"
-        fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines
-      workingDirectory: ${{ parameters.workingDirectory }}
-    env:
-      PROJ_FILE: ${{ parameters.projectFile }}
-      FOD_RELEASE_ID: $(fodReleaseId)
-      PACKAGE_FILE: "package.zip"
-      FOD_SCAN_NOTES: "Triggered by Azure DevOps Pipelines"
+
+  # Uncomment to use fcli for SAST scan    
+  #- task: PowerShell@2
+  #  displayName: 'FoD SAST Scan'
+  #  inputs:
+  #    targetType: 'inline'
+  #    script: |
+  #      Write-Host "##[command]scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}"
+  #      scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}
+  #      Write-Host "##[command]fcli fod sast-scan start --release $(fodReleaseId) --notes ""${env:FOD_SCAN_NOTES}"" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines"
+  #      fcli fod sast-scan start --release $(fodReleaseId) --notes "${env:FOD_SCAN_NOTES}" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines
+  #      $ScanId=(fcli util var get ::curScan::)
+  #      Write-Host "##[debug]Scan Id is: $ScanId"
+  #      Write-Host "##vso[task.setvariable variable=fodScanId]$ScanId"
+  #      Write-Host "##[command]fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines"
+  #      fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines
+  #    workingDirectory: ${{ parameters.workingDirectory }}
+  #  env:
+  #    PROJ_FILE: ${{ parameters.projectFile }}
+  #    FOD_RELEASE_ID: $(fodReleaseId)
+  #    PACKAGE_FILE: "package.zip"
+  #    FOD_SCAN_NOTES: "Triggered by Azure DevOps Pipelines"
   - task: PowerShell@2
     displayName: 'FoD Logout'
     inputs:

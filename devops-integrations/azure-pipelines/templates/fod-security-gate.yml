@@ -64,19 +64,11 @@ jobs:
         Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
 
-        Write-Host "##[command]`$SecurityRating=(fcli fod release get ""${App}:${Rel}"" -o expr=""{rating}"" --session azure-pipelines"
-        $SecurityRating=(fcli fod release get "${App}:${Rel}" -o expr="{rating}" --session azure-pipelines)
-        Write-Host "##[command]`$IsPassed=(fcli fod release get ""${App}:${Rel}"" -o expr=""{isPassed}"" --session azure-pipelines"
-        $IsPassed=(fcli fod release get "${App}:${Rel}" -o expr="{isPassed}" --session azure-pipelines)
-
-        Write-Host "##[debug]Release ""${App}:${Rel}"" Security Rating: ${SecurityRating}/5"
-
-        if ($IsPassed) {
-          Write-Host "##[debug]Release ""${App}:${Rel}"" has passed security policy"
-        } else {
-          Write-Host "##[error]Release ""${App}:${Rel}"" failed security policy"
-          #exit 1
-        }
+        Write-Host "##[command]fcli fod action run release-summary --release ""${App}:${Rel}"" -f release_summary.md --session azure-pipelines"
+        fcli fod action run release-summary --release "${App}:${Rel}" -f release_summary.md --session azure-pipelines
+        ##vso[task.uploadsummary]$(System.DefaultWorkingDirectory)/testsummary.md
+        Write-Host "##[command]fcli fod action run check-policy --release ""${App}:${Rel}"" --session azure-pipelines""
+        fcli fod action run check-policy --release "${App}:${Rel}" --session azure-pipelines
 
         Write-Host "##[command]Creating FoD Report for Release"
         fcli fod report create "${env:FOD_REPORT_NAME}" --format html --release "${App}:${Rel}" --template "${env:FOD_REPORT_TEMPLATE}" --store curReport --session azure-pipelines

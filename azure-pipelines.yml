@@ -278,9 +278,10 @@ stages:
   displayName: 'FoD Security Gate'
   condition: always() 
   dependsOn: 
-    - FoD_SAST
-    - FoD_OSS
+    #- FoD_SAST
+    #- FoD_OSS
     - FoD_DAST
+    - ScanCentral_DAST
   jobs:
     # Verify Security Policy for the Release
   - template: 'devops-integrations/azure-pipelines/templates/fod-security-gate.yml'

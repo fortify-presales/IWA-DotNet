@@ -64,10 +64,10 @@ jobs:
         Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
 
-        Write-Host "##[command]fcli fod action run release-summary --release ""${App}:${Rel}"" -f release_summary.md --session azure-pipelines"
-        fcli fod action run release-summary --release "${App}:${Rel}" -f release_summary.md --session azure-pipelines
-        ##vso[task.uploadsummary]$(System.DefaultWorkingDirectory)/testsummary.md
-        Write-Host "##[command]fcli fod action run check-policy --release ""${App}:${Rel}"" --session azure-pipelines""
+        Write-Host "##[command]fcli fod action run release-summary --release ""${App}:${Rel}"" -f releasesummary.md --session azure-pipelines"
+        fcli fod action run release-summary --release "${App}:${Rel}" -f releasesummary.md --session azure-pipelines
+        ##vso[task.uploadsummary]$(System.DefaultWorkingDirectory)/releasesummary.md
+        Write-Host "##[command]fcli fod action run check-policy --release ""${App}:${Rel}"" --session azure-pipelines"
         fcli fod action run check-policy --release "${App}:${Rel}" --session azure-pipelines
 
         Write-Host "##[command]Creating FoD Report for Release"

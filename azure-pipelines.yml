@@ -277,10 +277,10 @@ stages:
 - stage: FoD_SecurityGate
   displayName: 'FoD Security Gate'
   #condition: eq(variables['USE_FOD_SAST'], 'true') 
-  dependsOn: 
-    - FoD_SAST
-    - FoD_OSS
-    - FoD_DAST
+  #dependsOn: 
+  #  - FoD_SAST
+  #  - FoD_OSS
+  #  - FoD_DAST
   jobs:
     # Verify Security Policy for the Release
   - template: 'devops-integrations/azure-pipelines/templates/fod-security-gate.yml'

@@ -78,7 +78,7 @@ jobs:
         Write-Host "##[command]fcli fod release list --app "${App}" --session azure-pipelines"
         fcli fod release list --app "${App}" --session azure-pipelines
         Write-Host "##[command]fcli fod action run setup-release --release ""${App}:${Rel}"" --description ""Created automatically from Azure DevOps"" --copy-from ""${App}:${env:FOD_PARENT_RELEASE_NAME}"" --status Development --skip-if-exists -o expr=""{releaseId}"" --session azure-pipelines"
-        fcli fod action run setup-release --release "${App}:${Rel}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists --session azure-pipelines)
+        fcli fod action run setup-release --release "${App}:${Rel}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --skip-if-exists --session azure-pipelines
         $RelId=(fcli fod release get "${App}:${Rel}" -o expr="{releaseId}" --session azure-pipelines)
         Write-Host "##[debug]Setting fodReleaseId to $RelId"
         Write-Host "##vso[task.setvariable variable=fodReleaseId]$RelId"

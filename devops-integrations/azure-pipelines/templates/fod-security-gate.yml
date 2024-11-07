@@ -67,8 +67,6 @@ jobs:
         Write-Host "##[command]fcli fod action run release-summary --release ""${App}:${Rel}"" -f releasesummary.md --session azure-pipelines"
         fcli fod action run release-summary --release "${App}:${Rel}" -f releasesummary.md --session azure-pipelines
         ##vso[task.uploadsummary]$(System.DefaultWorkingDirectory)/releasesummary.md
-        Write-Host "##[command]fcli fod action run check-policy --release ""${App}:${Rel}"" --session azure-pipelines"
-        fcli fod action run check-policy --release "${App}:${Rel}" --session azure-pipelines
 
         Write-Host "##[command]Creating FoD Report for Release"
         fcli fod report create "${env:FOD_REPORT_NAME}" --format html --release "${App}:${Rel}" --template "${env:FOD_REPORT_TEMPLATE}" --store curReport --session azure-pipelines
@@ -79,6 +77,9 @@ jobs:
         Get-ChildItem -Path ${env:FOD_REPORT_DIR} -Filter '*.html' | Rename-Item -NewName { $_.Name -replace '_\d+' }
         Remove-Item -Force ${env:FOD_REPORT_DIR}/${env:FOD_REPORT_NAME}.zip | Out-Null
         fcli fod report delete ::curReport:: --session azure-pipelines
+
+        Write-Host "##[command]fcli fod action run check-policy --release ""${App}:${Rel}"" --session azure-pipelines"
+        fcli fod action run check-policy --release "${App}:${Rel}" --session azure-pipelines
 
         Write-Host "##[command]fcli fod session logout --session azure-pipelines"
         fcli fod session logout --session azure-pipelines

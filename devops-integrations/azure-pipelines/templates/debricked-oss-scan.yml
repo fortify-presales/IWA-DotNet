@@ -12,6 +12,8 @@ parameters:
 - name: jdkArch
   default: 'x64'
 - name: debrickedToken
+- name: debrickedRepo
+  default: $(Build.Repository.Name)
 
 jobs:
 - job: DebrickedOSSScan
@@ -37,8 +39,9 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        Write-Host "##[command]debricked scan . -e '*\**.lock' -e '**\node_modules\**'' -t ${env:DEBRICKED_TOKEN}"
-        debricked scan . -e "*\**.lock" -e "**\node_modules\**" -t ""${env:DEBRICKED_TOKEN}""
+        Write-Host "##[command]debricked scan . -e '*\**.lock' -e '**\node_modules\**'' -r ${env:DEBRICKED_REPO} -t ${env:DEBRICKED_TOKEN}"
+        debricked scan . -e "*\**.lock" -e "**\node_modules\**" -r ""${env:DEBRICKED_REPO}"" -t ""${env:DEBRICKED_TOKEN}""
       workingDirectory: ${{ parameters.workingDirectory }}
     env:
       DEBRICKED_TOKEN: ${{ parameters.debrickedToken }}
+      DEBRICKED_REPO: ${{ parameters.debrickedRepo }}

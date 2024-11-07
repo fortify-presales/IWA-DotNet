@@ -38,7 +38,6 @@ jobs:
       targetType: 'inline'
       script: |
         Write-Host "##[command]debricked scan . -e '*\**.lock' -e '**\node_modules\**'' -t ${env:DEBRICKED_TOKEN}"
-        debricked callgraph -e "**/buid/classes/test/**"
         debricked scan . -e "*\**.lock" -e "**\node_modules\**" -t ""${env:DEBRICKED_TOKEN}""
       workingDirectory: ${{ parameters.workingDirectory }}
     env:

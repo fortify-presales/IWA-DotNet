@@ -79,7 +79,7 @@ variables:
 - name: USE_FOD_OSS
   value: false
 - name: USE_DEBRICKED
-  value: false
+  value: true
 - name: USE_FOD_DAST
   value: false
 - name: USE_SCANCENTRAL_SAST
@@ -214,8 +214,8 @@ stages:
   dependsOn: 
     - FoD_SAST
     - FoD_OSS
-#   - Debricked_OSS
-#   - ScanCentral_SAST
+    - Debricked_OSS
+    - ScanCentral_SAST
   jobs: 
     # This is a simulated deployment and does nothing
   - template: 'devops-integrations/azure-pipelines/templates/simulate-deployment.yml'

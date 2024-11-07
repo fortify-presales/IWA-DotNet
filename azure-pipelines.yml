@@ -154,6 +154,7 @@ stages:
         fodClientSecret: $(FOD_CLIENT_SECRET)
         fodAppName: "$(FORTIFY_APP_NAME)"
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
+        vsEdition: "Professional"
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
@@ -176,6 +177,7 @@ stages:
         fodClientSecret: $(FOD_CLIENT_SECRET)
         fodAppName: "$(FORTIFY_APP_NAME)"
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
+        vsEdition: "Professional"
         pool:
             name: 'Fortify' # use named self-hosted pool 
             #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool

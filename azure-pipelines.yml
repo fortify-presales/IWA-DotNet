@@ -141,9 +141,8 @@ stages:
 - stage: FoD_SAST
   displayName: 'FoD SAST'
   condition: eq(variables['USE_FOD_SAST'], 'true') 
-  # Commented out below so runs on pipeline start - uncomment for real life
-  #dependsOn: 
-  #  - BuildAndUnitTest
+  dependsOn: 
+    - BuildAndUnitTest
   jobs:
     # Run FoD SAST Scan on Project
   - template: 'devops-integrations/azure-pipelines/templates/fod-sast-scan.yml'
@@ -166,9 +165,8 @@ stages:
 - stage: FoD_OSS
   displayName: 'FoD OSS'
   condition: eq(variables['USE_FOD_OSS'], 'true') 
-  # Commented out below so runs on pipeline start - uncomment for real life
-  #dependsOn: 
-  #  - BuildAndUnitTest
+  dependsOn: 
+    - BuildAndUnitTest
   jobs:
     # Run FoD OSS Scan on Project
   - template: 'devops-integrations/azure-pipelines/templates/fod-oss-scan.yml'

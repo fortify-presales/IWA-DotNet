@@ -59,7 +59,7 @@
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.6.0" />
     <PackageReference Include="TGServiceInterface" Version="3.2.1" />
     <PackageReference Include="TinyMCE" Version="5.10.7" />
-	  <PackageReference Include="Newtonsoft.Json" Version="12.*" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
 </Project>

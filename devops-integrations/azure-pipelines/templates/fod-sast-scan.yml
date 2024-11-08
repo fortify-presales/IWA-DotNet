@@ -107,7 +107,7 @@ jobs:
         Write-Host "##vso[task.prependpath]$(Build.SourcesDirectory)\sc-client\bin"
       showWarnings: true
   - task: PowerShell@2
-    display: 'Set ScanCentral Java Home'
+    displayName: 'Set ScanCentral Java Home'
     inputs:
       targetType: 'inline'
       script: |

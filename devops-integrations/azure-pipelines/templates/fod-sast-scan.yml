@@ -16,13 +16,14 @@ parameters:
 - name: vsVersion
   default: '2022'
 - name: vsEdition
-  default: 'Professional'
+  default: 'Enterprise'
 - name: jdkVersion
   default: '17'
 - name: jdkArch
   default: 'x64'
 - name: fodApiUrl
   default: 'https://api.ams.fortify.com'
+- name: fodConnection
 - name: fodClientId
 - name: fodClientSecret
 - name: fodAppName
@@ -92,26 +93,48 @@ jobs:
       FOD_APP_NAME: ${{ parameters.fodAppName }}
       FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
       FOD_PARENT_RELEASE_NAME: ${{ parameters.fodParentReleaseName }}
-  - task: PowerShell@2
-    displayName: 'FoD SAST Scan'
+
+  #
+  # Uncomment below to use Fortify Azure DevOps plugin to initiate SAST scan
+  #
+  - task: FortifyOnDemandStatic@9
     inputs:
-      targetType: 'inline'
-      script: |
-        Write-Host "##[command]scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}"
-        scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}
-        Write-Host "##[command]fcli fod sast-scan start --release $(fodReleaseId) --notes ""${env:FOD_SCAN_NOTES}"" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines"
-        fcli fod sast-scan start --release $(fodReleaseId) --notes "${env:FOD_SCAN_NOTES}" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines
-        $ScanId=(fcli util var get ::curScan::)
-        Write-Host "##[debug]Scan Id is: $ScanId"
-        Write-Host "##vso[task.setvariable variable=fodScanId]$ScanId"
-        Write-Host "##[command]fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines"
-        fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines
-      workingDirectory: ${{ parameters.workingDirectory }}
-    env:
-      PROJ_FILE: ${{ parameters.projectFile }}
-      FOD_RELEASE_ID: $(fodReleaseId)
-      PACKAGE_FILE: "package.zip"
-      FOD_SCAN_NOTES: "Triggered by Azure DevOps Pipelines"
+      FortifyProjects: ${{ parameters.workingDirectory }}
+      FodConnection: ${{ parameters.fodConnection }}
+      ReleaseOptions: '0'
+      ReleaseId: $(fodReleaseId)
+      EntitlementSelection: '1'
+      EntitlementPreference: '1'
+      OverrideScanSettings: '2'
+      InProgressScanActionType: '2'
+      RemediationScanPreference: '2'
+      BuildType: 'msbuild'
+      BuildFile: ${{ parameters.projectFile }}
+      PolicyFailAction: '0'
+
+  #
+  # Uncomment below to use fcli to initiate SAST scan
+  #
+  # task: PowerShell@2
+  #  displayName: 'FoD SAST Scan'
+  #  inputs:
+  #    targetType: 'inline'
+  #    script: |
+  #      Write-Host "##[command]scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}"
+  #      scancentral package -bt msbuild -bf ${env:PROJ_FILE} -o ${env:PACKAGE_FILE}
+  #      Write-Host "##[command]fcli fod sast-scan start --release $(fodReleaseId) --notes ""${env:FOD_SCAN_NOTES}"" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines"
+  #      fcli fod sast-scan start --release $(fodReleaseId) --notes "${env:FOD_SCAN_NOTES}" -f ${env:PACKAGE_FILE} --store curScan --session azure-pipelines
+  #      $ScanId=(fcli util var get ::curScan::)
+  #      Write-Host "##[debug]Scan Id is: $ScanId"
+  #      Write-Host "##vso[task.setvariable variable=fodScanId]$ScanId"
+  #      Write-Host "##[command]fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines"
+  #      fcli fod sast-scan wait-for ::curScan:: --session azure-pipelines
+  #    workingDirectory: ${{ parameters.workingDirectory }}
+  #  env:
+  #    PROJ_FILE: ${{ parameters.projectFile }}
+  #    FOD_RELEASE_ID: $(fodReleaseId)
+  #    PACKAGE_FILE: "package.zip"
+  #    FOD_SCAN_NOTES: "Triggered by Azure DevOps Pipelines"
   - task: PowerShell@2
     displayName: 'FoD Logout'
     inputs:

@@ -151,7 +151,7 @@ stages:
     parameters:
         workingDirectory: 'InsecureWebApp' 
         projectFile: 'InsecureWebApp.csproj'
-        fodConnection: 'FortifyOnDemandServiceConnection-IWA-DotNet'
+        fodConnection: 'FOD-AMS'
         fodApiUrl: $(FOD_API_URL)
         fodClientId: $(FOD_CLIENT_ID)
         fodClientSecret: $(FOD_CLIENT_SECRET)

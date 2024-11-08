@@ -24,6 +24,7 @@ parameters:
 - name: fodApiUrl
   default: 'https://api.ams.fortify.com'
 - name: fodConnection
+  default: 'FortifyOnDemandServiceConnection'
 - name: fodClientId
 - name: fodClientSecret
 - name: fodAppName
@@ -52,7 +53,7 @@ jobs:
     inputs:
       version: 'latest'
   - task: PowerShell@2
-    displayName: 'FoD Setup Release'
+    displayName: 'Set FoD App and Release Name'
     inputs:
       targetType: 'inline'
       script: |
@@ -74,33 +75,46 @@ jobs:
           Write-Host "##[debug]Using FORTIFY_RELEASE_NAME ${Rel}"
           Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME]${Rel}"
         }
+      showWarnings: true
+    env:
+      FOD_APP_NAME: ${{ parameters.fodAppName }}
+      FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
+      FOD_PARENT_RELEASE_NAME: ${{ parameters.fodParentReleaseName }}
+  - task: PowerShell@2
+    displayName: 'FoD Setup Release'
+    inputs:
+      targetType: 'inline'
+      script: |
         Write-Host "##[command]fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines"
         fcli fod session login --url ""${env:FOD_API_URL}"" --client-id ""${env:FOD_CLIENT_ID}"" --client-secret ""${env:FOD_CLIENT_SECRET}"" --session azure-pipelines
-        Write-Host "##[command]fcli fod release list --app "${App}" --session azure-pipelines"
-        fcli fod release list --app "${App}" --session azure-pipelines
-        Write-Host "##[command]fcli fod action run setup-release --release ""${App}:${Rel}"" --description ""Created automatically from Azure DevOps"" --copy-from ""${App}:${env:FOD_PARENT_RELEASE_NAME}"" --status Development --session azure-pipelines"
-        fcli fod action run setup-release --release "${App}:${Rel}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --session azure-pipelines
-        $RelId=(fcli fod release get "${App}:${Rel}" -o expr="{releaseId}" --session azure-pipelines)
+        
+        Write-Host "##[command]fcli fod action run setup-release --release ""${FORTIFY_APP_NAME}:${FORTIFY_RELEASE_NAME}"" --description ""Created automatically from Azure DevOps"" --copy-from ""${App}:${env:FOD_PARENT_RELEASE_NAME}"" --status Development --session azure-pipelines"
+        fcli fod action run setup-release --release "${FORTIFY_APP_NAME}:${FORTIFY_RELEASE_NAME}" --description "Created automatically from Azure DevOps" --copy-from "${App}:${env:FOD_PARENT_RELEASE_NAME}" --status Development --session azure-pipelines
+        $RelId=(fcli fod release get "${FORTIFY_APP_NAME}:${FORTIFY_RELEASE_NAME}" -o expr="{releaseId}" --session azure-pipelines)
         Write-Host "##[debug]Setting fodReleaseId to $RelId"
         Write-Host "##vso[task.setvariable variable=fodReleaseId]$RelId"
-        fcli tool sc-client install -y -d $(Build.SourcesDirectory)\sc-client
-        Write-Host "##vso[task.prependpath]$(Build.SourcesDirectory)\sc-client\bin"
       showWarnings: true
     env:
       FOD_API_URL: ${{ parameters.fodApiUrl }}
       FOD_CLIENT_ID: ${{ parameters.fodClientId }}
       FOD_CLIENT_SECRET: ${{ parameters.fodClientSecret }}
       FOD_APP_NAME: ${{ parameters.fodAppName }}
-      FOD_RELEASE_NAME: ${{ parameters.fodReleaseName }}
-      FOD_PARENT_RELEASE_NAME: ${{ parameters.fodParentReleaseName }}
+  - task: PowerShell@2
+    displayName: 'Install ScanCentral Client'
+    inputs:
+      targetType: 'inline'
+      script: |
+        fcli tool sc-client install -y -d $(Build.SourcesDirectory)\sc-client
+        Write-Host "##vso[task.prependpath]$(Build.SourcesDirectory)\sc-client\bin"
+      showWarnings: true
 
   #
   # Uncomment below to use Fortify Azure DevOps plugin to initiate SAST scan
   #
   - task: FortifyOnDemandStatic@9
     inputs:
-      FortifyProjects: ${{ parameters.workingDirectory }}
-      FodConnection: ${{ parameters.fodConnection }}
+      FortifyProjects: ${env:WORKING_DIRECTORY}
+      FodConnection: ${env:FOD_CONNECTION}
       ReleaseOptions: '0'
       ReleaseId: $(fodReleaseId)
       EntitlementSelection: '1'
@@ -109,8 +123,12 @@ jobs:
       InProgressScanActionType: '2'
       RemediationScanPreference: '2'
       BuildType: 'msbuild'
-      BuildFile: ${{ parameters.projectFile }}
+      BuildFile: ${env:PROJECT_FILE}
       PolicyFailAction: '0'
+    env:
+      WORKING_DIRECTORY: ${{ parameters.workingDirectory }}
+      FOD_CONNECTION: ${{ parameters.fodConnection }}
+      PROJECT_FILE: ${{ parameters.projectFile }}
 
   #
   # Uncomment below to use fcli to initiate SAST scan

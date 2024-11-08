@@ -7,6 +7,10 @@ parameters:
   default: {}
 - name: workingDirectory
   default: ''
+- name: jdkVersion
+  default: '17'
+- name: jdkArch
+  default: 'x64'
 - name: sscUrl
 - name: sscCiToken
 - name: sscAppName
@@ -60,13 +64,3 @@ jobs:
       SSC_CI_TOKEN: ${{ parameters.sscCiToken }}
       SSC_APP_NAME: ${{ parameters.sscAppName }}
       SSC_APPVER_NAME: ${{ parameters.sscAppVerName }}
-  - task: PublishBuildArtifacts@1
-    condition: succeededOrFailed()
-    inputs:
-      pathToPublish: ${{ parameters.reportDir }}
-      artifactName: FortifyReports
-  - task: PublishHtmlReport@1
-    condition: succeededOrFailed()
-    inputs:
-      tabName: 'Fortify Security Report'
-      reportDir: ${{ parameters.reportFile }}

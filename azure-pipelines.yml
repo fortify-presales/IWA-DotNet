@@ -114,8 +114,9 @@ stages:
         srcProject: 'InsecureWebApp/InsecureWebApp.csproj' 
         testProject: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Software Composition Analysis - OSS Scan with Debricked
@@ -132,8 +133,9 @@ stages:
         workingDirectory: '.' 
         debrickedToken: $(DEBRICKED_TOKEN)
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Static Application Security Testing with Fortify on Demand
@@ -156,8 +158,9 @@ stages:
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
         vsEdition: "Professional"
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Software Composition Analysis - OSSC Scan with Fortify on Demand
@@ -179,8 +182,9 @@ stages:
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
         vsEdition: "Professional"
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Static Application Security Testing with ScanCentral SAST
@@ -203,8 +207,9 @@ stages:
         sscAppVerName: "$(FORTIFY_RELEASE_NAME)"
         #notificationEmail: 'your_email_address'
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   # 
   # Deploy the application - use an appropriate set of tasks for your application/environment here
@@ -222,15 +227,17 @@ stages:
     parameters:
         workingDirectory: 'InsecureWebApp'
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 # More likely you will use something like the following to deploy the application to Azure
 #  - template: 'devops-integrations/azure-pipelines/templates/deploy-to-azure.yml'
 #    parameters:
 #        srcProject: 'InsecureWebApp/InsecureWebApp.csproj' 
 #        pool:
-#            name: 'Fortify' # use named self-hosted pool 
-#            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+#            #name: 'Fortify' # uncomment to use named self-hosted pool 
+#            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+#            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Dynamic Application Security Testing with Fortify on Demand
@@ -248,9 +255,9 @@ stages:
         fodClientSecret: $(FOD_CLIENT_SECRET)
         fodAppName: "$(FORTIFY_APP_NAME)"
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
-        pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
 #
 # Dynamic Application Security Testing with ScanCentral DAST
@@ -268,8 +275,9 @@ stages:
         sscAppName: "$(FORTIFY_APP_NAME)"
         sscAppVerName: "$(FORTIFY_RELEASE_NAME)"
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x
 
   #
   # Verify FoD Security Policy
@@ -293,5 +301,6 @@ stages:
         fodAppName: "$(FORTIFY_APP_NAME)"
         fodReleaseName: "$(FORTIFY_RELEASE_NAME)"
         pool:
-            name: 'Fortify' # use named self-hosted pool 
-            #vmImage: 'windows-2022' # or uncomment to use Azure Devops cloud-hosted pool
+            #name: 'Fortify' # uncomment to use named self-hosted pool 
+            vmImage: 'windows-2022' # uncomment to use Azure Devops cloud-hosted pool
+            #vmImage: 'ubuntu-20.04' # uncomment to use Linux Agent with DotNet Core 6.x

@@ -144,25 +144,25 @@ stages:
     pool:
       #vmImage: 'windows-latest'
       name: 'Default'
-      steps:
-      - checkout: self
-        persistCredentials: "true"
-        clean: "true"
-      - task: UseDotNet@2
-        inputs:
-          version: '9.x'
-      - task: DotNetCoreCLI@2
-        displayName: 'dotnet build'
-        inputs:
-          command: 'build'
-          configuration: 'Debug'
-          projects: 'InsecureWebApp/InsecureWebApp.csproj'
-      - task: DotNetCoreCLI@2
-        displayName: 'dotnet test'
-        inputs:
-          command: 'test'
-          configuration: 'Debug'
-          projects: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
+    steps:
+    - checkout: self
+    persistCredentials: "true"
+    clean: "true"
+    - task: UseDotNet@2
+    inputs:
+        version: '9.x'
+    - task: DotNetCoreCLI@2
+    displayName: 'dotnet build'
+    inputs:
+        command: 'build'
+        configuration: 'Debug'
+        projects: 'InsecureWebApp/InsecureWebApp.csproj'
+    - task: DotNetCoreCLI@2
+    displayName: 'dotnet test'
+    inputs:
+        command: 'test'
+        configuration: 'Debug'
+        projects: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
 
 #
 # FoD SAST and SCA
@@ -179,48 +179,48 @@ stages:
     pool:
       #vmImage: 'windows-latest'
       name: 'Default'
-      variables:
-      - name: FOD_RELEASE_FROM_SETUP
-        value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
-      steps:
-      - checkout: self
-        persistCredentials: "true"
-        clean: "true"
-      - task: PowerShell@2
-        displayName: 'Install Fortify CLI via @fortify/setup'
-        inputs:
-          targetType: 'inline'
-          workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
-          script: |
-            npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
-            npx @fortify/setup@v2 env ado
-      - task: PowerShell@2
-        displayName: 'Run FoD CI Scan'
-        inputs:
-          targetType: 'inline'
-          workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
-          script: |
-            $ErrorActionPreference = "Stop"
-            fcli action run ci
-        env:
-          FOD_URL: $(FOD_URL)
-          FOD_CLIENT_ID: $(FOD_CLIENT_ID)
-          FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
-          FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
-          COPY_FROM_RELEASE: "$(FOD_PARENT_RELEASE)"
-          SAST_ASSESSMENT_TYPE: "$(FOD_DEFAULT_ASSESSMENT_TYPE)"
-          SETUP_EXTRA_OPTS: '--sdlc-status Development --app-owner "$(FOD_DEFAULT_OWNER)"'
-          PACKAGE_EXTRA_OPTS: "-bt dotnet -bf InsecureWebApp.csproj"
-          DO_SETUP: true
-          DO_SAST_SCAN: true
-          DO_AVIATOR_AUDIT: true
-          DO_SCA_SCAN: true
-          DO_WAIT: true
-          SAST_WAIT_EXTRA_OPTS: --timeout 2h
-          DO_POLICY_CHECK: false  # we will do policy check in a separate job after DAST scan
-          DO_JOB_SUMMARY: true
-          DO_PR_COMMENT: true
-          DO_EXPORT: true
+    variables:
+    - name: FOD_RELEASE_FROM_SETUP
+    value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
+    steps:
+    - checkout: self
+    persistCredentials: "true"
+    clean: "true"
+    - task: PowerShell@2
+    displayName: 'Install Fortify CLI via @fortify/setup'
+    inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
+        script: |
+        npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
+        npx @fortify/setup@v2 env ado
+    - task: PowerShell@2
+    displayName: 'Run FoD CI Scan'
+    inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
+        script: |
+        $ErrorActionPreference = "Stop"
+        fcli action run ci
+    env:
+        FOD_URL: $(FOD_URL)
+        FOD_CLIENT_ID: $(FOD_CLIENT_ID)
+        FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
+        FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
+        COPY_FROM_RELEASE: "$(FOD_PARENT_RELEASE)"
+        SAST_ASSESSMENT_TYPE: "$(FOD_DEFAULT_ASSESSMENT_TYPE)"
+        SETUP_EXTRA_OPTS: '--sdlc-status Development --app-owner "$(FOD_DEFAULT_OWNER)"'
+        PACKAGE_EXTRA_OPTS: "-bt dotnet -bf InsecureWebApp.csproj"
+        DO_SETUP: true
+        DO_SAST_SCAN: true
+        DO_AVIATOR_AUDIT: true
+        DO_SCA_SCAN: true
+        DO_WAIT: true
+        SAST_WAIT_EXTRA_OPTS: --timeout 2h
+        DO_POLICY_CHECK: false  # we will do policy check in a separate job after DAST scan
+        DO_JOB_SUMMARY: true
+        DO_PR_COMMENT: true
+        DO_EXPORT: true
 
 #
 # Deploy to Azure App Service
@@ -239,26 +239,26 @@ stages:
     pool:
       #vmImage: 'windows-latest'
       name: 'Default'
-      strategy:
-        runOnce:
-          deploy:
+    strategy:
+      runOnce:
+        deploy:
             steps:
             - checkout: self
-              persistCredentials: "true"
-              clean: "true"
+                persistCredentials: "true"
+                clean: "true"
             - task: UseDotNet@2
-              inputs:
+                inputs:
                 version: '9.x'
             - task: DotNetCoreCLI@2
-              displayName: 'Run dotnet publish'
-              inputs:
+                displayName: 'Run dotnet publish'
+                inputs:
                 command: 'publish'
                 projects: 'InsecureWebApp/InsecureWebApp.csproj'
                 configuration: 'Debug'
                 arguments: '--output $(Build.ArtifactStagingDirectory)/publish'
             - task: ArchiveFiles@2
-              displayName: 'Zip published output'
-              inputs:
+                displayName: 'Zip published output'
+                inputs:
                 rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
                 includeRootFolder: false
                 archiveType: 'zip'

@@ -1,0 +1,79 @@
+﻿@page
+@model LoginWith2faModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+}
+
+<div class="d-flex justify-content-center align-items-start" style="min-height:65vh; padding-top:28px;">
+    <div class="card shadow-sm" style="width:100%; max-width:520px;">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-1">@ViewData["Title"]</h3>
+            <p class="text-muted text-center small mb-3">Your login is protected with an authenticator app. Enter your authenticator code below.</p>
+
+            <form method="post" asp-route-returnUrl="@Model.ReturnUrl" novalidate>
+                <input asp-for="RememberMe" type="hidden" />
+                <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.TwoFactorCode" class="form-label"></label>
+                    <input asp-for="Input.TwoFactorCode" class="form-control form-control-lg" autocomplete="off" />
+                    <span asp-validation-for="Input.TwoFactorCode" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input asp-for="Input.RememberMachine" class="form-check-input" />
+                    <label asp-for="Input.RememberMachine" class="form-check-label">@Html.DisplayNameFor(m => m.Input.RememberMachine)</label>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <button type="submit" class="btn btn-primary btn-lg">Log in</button>
+                    <button type="submit" asp-page-handler="ShowCode" formnovalidate class="btn btn-outline-secondary btn-lg ml-2">Show secret</button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.SharedKey))
+                {
+                    <div class="alert alert-info mt-3" role="alert">
+                        <div class="d-flex align-items-center">
+                            <strong class="me-2">Authenticator shared key (Base32):</strong>
+                            <span id="sharedKey" style="font-family:monospace; font-size:1.05em;">@Model.SharedKey</span>
+                            <button id="copyCode" type="button" class="btn btn-sm btn-outline-dark ms-3">Copy</button>
+                        </div>
+                        <div class="small text-muted mt-2">Paste this secret into an external TOTP tester (development use only).</div>
+                    </div>
+                }
+
+                <div class="text-center mt-3 small">
+                    Don't have access to your authenticator device? <a id="recovery-code-login" asp-page="./LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl">Log in with a recovery code</a>.
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'copyCode') {
+                var text = document.getElementById('sharedKey')?.innerText || '';
+                if (!text) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        e.target.innerText = 'Copied';
+                        setTimeout(function () { e.target.innerText = 'Copy'; }, 1500);
+                    });
+                    return;
+                }
+                // fallback
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); e.target.innerText = 'Copied'; }
+                catch { }
+                document.body.removeChild(ta);
+                setTimeout(function () { e.target.innerText = 'Copy'; }, 1500);
+            }
+        });
+    </script>
+}

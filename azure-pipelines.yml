@@ -1,0 +1,407 @@
+# Example DevSecOps Pipeline using OpenText Application Security Core
+
+name: IWA-DevSecOps
+
+trigger:
+  batch: "true"
+  branches:
+    include:
+    - main
+    - develop
+    - feature/*
+    - release/*
+    exclude:
+    - experimental/*
+  paths:
+    exclude:
+    - README.md
+    - bin/*
+    - etc/*
+    - media/*
+
+pr:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    exclude:
+    - README.md
+    - bin/*
+    - etc/*
+    - media/*
+  
+variables:
+
+  #
+  # In order for the pipeline to execute successfully you should create and set the following variables in the Pipeline UI.
+  # 
+  # For FoD:
+  #   FOD_URL                       - FoD Base Url, e.g. "https://ams.fortify.com"
+  #   FOD_CLIENT_ID                 - FoD API Client Id
+  #   FOD_CLIENT_SECRET             - FoD API Client Secret
+  #   FOD_APP_NAME_POSTFIX          - A postfix string to apply to the application to make it unique, set to empty to use DEFAULT_APP_NAME
+  #   FOD_RELEASE_NAME              - FoD Release Name (if not specified, a name will be generated based on project and branch)
+  #   FOD_PARENT_RELEASE            - FoD Parent Release Name (if applicable)
+  #   FOD_DEFAULT_OWNER             - FoD Application Owner
+  #   FOD_DEFAULT_ASSESSMENT_TYPE   - FoD Assessment Type, e.g. "Static Assessment"
+  #   FOD_DAST_ASSESSMENT_TYPE_ID   - FoD DAST Automated Assessment Type Id (if using DAST Automated)
+  #   FOD_ENTITLEMENT_ID            - FoD Entitlement Id (if using DAST Automated)
+  #
+  # For Azure Deployment:
+  #   AZURE_SERVICE_CONNECTION      - Name of the Azure Service Connection configured in the Pipeline
+  #
+  # The pipeline job templates make use of the Fortify CLI tool (https://github.com/fortify/fcli) to interact with FoD.
+  
+  # Change these variables depending on which parts of the pipeline to execute:
+- name: BUILD_AND_UNIT_TEST
+  value: "true"
+- name: USE_FOD_SAST
+  value: "true"
+- name: USE_FOD_DAST
+  value: "false"
+- name: DEPLOY_TO_AZURE
+  value: "false"
+
+  #
+  # By default the FoD application name is set to the name of the Git repository
+  # By default the FoD release name is set to the name of the Git branch
+  # If you wish to override any of these please set the following variables from the pipelines UI:
+  #
+  # FORTIFY_APP_NAME_OVERRIDE
+  # FORTIFY_RELEASE_NAME_OVERRIDE
+  #
+- name: FORTIFY_APP_NAME
+  value: $(Build.Repository.Name)
+- name: FORTIFY_RELEASE_NAME
+  value: $[replace(variables['Build.SourceBranch'], 'refs/heads/', '')]
+
+stages:
+
+  #
+  # Setup: compute and publish variables for other stages
+  #
+- stage: Setup
+  displayName: 'Setup'
+  jobs:
+  - job: SetupJob
+    displayName: 'Set Fortify App and Release'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: Bash@3
+      name: SetAppAndRelease
+      inputs:
+        targetType: 'inline'
+        script: |
+          set -euo pipefail
+          # Prefer pipeline override variable FORTIFY_APP_NAME if set; fallback to repo name
+          if [ -n "${FORTIFY_APP_NAME_OVERRIDE:-}" ]; then
+            appName="${FORTIFY_APP_NAME_OVERRIDE}${FOD_APP_NAME_POSTFIX:+${FOD_APP_NAME_POSTFIX}}"
+          else
+            appName="${BUILD_REPOSITORY_NAME}${FOD_APP_NAME_POSTFIX:+${FOD_APP_NAME_POSTFIX}}"
+          fi
+
+          # Determine release name: use override if present; otherwise build from PR or branch
+          if [ -n "${FORTIFY_RELEASE_NAME_OVERRIDE:-}" ]; then
+            relName="${FORTIFY_RELEASE_NAME_OVERRIDE}"
+          else
+            if [ "$(Build.Reason)" = "PullRequest" ]; then
+              relName="$(System.PullRequest.PullRequestId)"
+            else
+              relName="$(Build.SourceBranchName)"
+            fi
+          fi
+
+          appAndRelName="${appName}:${relName}"
+
+          echo "Setting FORTIFY_APP_NAME to ${appName}"
+          echo "Setting FORTIFY_RELEASE_NAME to ${relName}"
+          echo "Setting FORTIFY_APP_AND_RELEASE_NAME to ${appAndRelName}"
+          echo "##vso[task.setvariable variable=FORTIFY_APP_NAME;isOutput=true]${appName}"
+          echo "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME;isOutput=true]${relName}"
+          echo "##vso[task.setvariable variable=FORTIFY_APP_AND_RELEASE_NAME;isOutput=true]${appAndRelName}"
+
+  #
+  # Build and Unit Test the application components
+  #
+- stage: Build_And_Unit_Test
+  displayName: 'Build and Unit Test'
+  condition: and(succeeded(), eq(variables['BUILD_AND_UNIT_TEST'], 'true'))
+  jobs:
+  - job: Build
+    pool:
+     vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: UseDotNet@2
+      inputs:
+        version: '9.x'
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet build'
+      inputs:
+        command: 'build'
+        configuration: 'Debug'
+        projects: 'InsecureWebApp/InsecureWebApp.csproj'
+  - job: UnitTest
+    dependsOn: Build
+    pool:
+     vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: UseDotNet@2
+      inputs:
+        version: '9.x'
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet test'
+      inputs:
+        command: 'test'
+        configuration: 'Debug'
+        projects: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
+
+  #
+  # FoD SAST and SCA
+  #  
+- stage: FoD_SAST_and_SCA
+  displayName: 'FoD SAST and SCA'
+  condition: and(succeeded(), eq(variables['USE_FOD_SAST'], 'true'))
+  dependsOn:
+  - Setup
+  - Build_And_Unit_Test 
+  jobs:
+  - job: Fortify_CLI_Scan
+    displayName: 'Run FOD SAST and SCA Scan via Fortify CLI'
+    pool:
+      vmImage: 'ubuntu-latest'
+    variables:
+    - name: FOD_RELEASE_FROM_SETUP
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: Bash@3
+      displayName: 'Install Fortify CLI via @fortify/setup'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
+          npx @fortify/setup@v2 env ado
+    - task: Bash@3
+      displayName: 'Run FoD CI Scan'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          set -euo pipefail
+          fcli action run ci
+      env:
+        FOD_URL: $(FOD_URL)
+        FOD_CLIENT_ID: $(FOD_CLIENT_ID)
+        FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
+        FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
+        COPY_FROM_RELEASE: "$(FOD_PARENT_RELEASE)"
+        SAST_ASSESSMENT_TYPE: "$(FOD_DEFAULT_ASSESSMENT_TYPE)"
+        SETUP_EXTRA_OPTS: '--sdlc-status Development --app-owner "$(FOD_DEFAULT_OWNER)"'
+        PACKAGE_EXTRA_OPTS: "-bt dotnet -bf InsecureWebApp.csproj"
+        DO_SETUP: true
+        DO_SAST_SCAN: true
+        DO_AVIATOR_AUDIT: true
+        DO_SCA_SCAN: true
+        DO_WAIT: true
+        SAST_WAIT_EXTRA_OPTS: --timeout 2h
+        DO_POLICY_CHECK: false  # we will do policy check in a separate job after DAST scan
+        DO_JOB_SUMMARY: true
+        DO_PR_COMMENT: true
+        DO_EXPORT: true
+
+  #
+  # Deploy to Azure App Service
+  #
+- stage: Deploy_to_Azure_App_Service
+  displayName: 'Deploy to Azure App Service'
+  condition: and(succeeded(), eq(variables['DEPLOY_TO_AZURE'], 'true'), eq(variables['Build.SourceBranchName'], 'main'))
+  dependsOn:
+  - Setup
+  - Build_And_Unit_Test
+  - FoD_SAST_and_SCA
+  jobs:
+  - deployment: Deploy
+    displayName: 'Deploy to Azure App Service'
+    environment: 'development'
+    pool:
+     vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: "true"
+            clean: "true"
+          - task: UseDotNet@2
+            inputs:
+              version: '9.x'
+          - task: DotNetCoreCLI@2
+            displayName: 'Run dotnet publish'
+            inputs:
+              command: 'publish'
+              projects: 'InsecureWebApp/InsecureWebApp.csproj'
+              configuration: 'Debug'
+              arguments: '--output $(Build.ArtifactStagingDirectory)/publish'
+          - task: ArchiveFiles@2
+            displayName: 'Zip published output'
+            inputs:
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/InsecureWebApp.zip'
+              replaceExistingArchive: true
+          - task: AzureWebApp@1
+            displayName: 'Deploy Web App'
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              appType: 'webAppLinux'
+              appName: 'iwadotnet'
+              package: '$(Build.ArtifactStagingDirectory)/publish'
+              deploymentMethod: 'zipDeploy'
+              startupCommand: 'dotnet InsecureWebApp.dll'
+
+  #
+  # FOD DAST
+  #
+- stage: FoD_DAST
+  displayName: 'FoD DAST'
+  condition: >-
+    and(
+      eq(variables['USE_FOD_DAST'], 'true'),
+      eq(variables['Build.SourceBranchName'], 'main'),
+      eq(dependencies.Build_And_Unit_Test.result, 'succeeded'),
+      or(
+        eq(dependencies.Deploy_to_Azure_App_Service.result, 'succeeded'),
+        eq(dependencies.Deploy_to_Azure_App_Service.result, 'skipped')
+      )
+    )
+  dependsOn:
+  - Setup
+  - Deploy_to_Azure_App_Service
+  jobs:
+  - job: Fortify_CLI_DAST_Scan
+    displayName: 'Run FoD DAST Scan via Fortify CLI'
+    pool:
+      vmImage: 'ubuntu-latest'
+    variables:
+    - name: FOD_RELEASE_FROM_SETUP
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: Bash@3
+      displayName: 'Install Fortify CLI via @fortify/setup'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
+          npx @fortify/setup@v2 env ado
+    - task: Bash@3
+      displayName: 'Run FoD DAST Scan'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          set -euo pipefail
+          echo "Running FoD DAST Scan for release: ${FOD_RELEASE:-}"
+          echo "Logging in to FoD..."
+          fcli fod session login --url "${FOD_URL:-}" --client-id "${FOD_CLIENT_ID:-}" --client-secret "${FOD_CLIENT_SECRET:-}" --fod-session ado-pipeline
+          echo "Starting DAST scan for release: ${FOD_RELEASE:-}"
+          fcli fod dast-scan start --release "${FOD_RELEASE:-}" --in-progress "Queue" --store curScan --fod-session ado-pipeline
+          sleep 10
+          fcli fod dast-scan wait-for ::curScan:: --fod-session ado-pipeline
+          echo "DAST scan completed. Logging out..."
+          fcli fod session logout --fod-session ado-pipeline
+      env:
+        FOD_URL: $(FOD_URL)
+        FOD_CLIENT_ID: $(FOD_CLIENT_ID)
+        FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
+        FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
+
+- stage: Completion
+  displayName: 'Pipeline Complete'
+  condition: always()
+  dependsOn:
+  - Setup
+  - Build_And_Unit_Test
+  - FoD_SAST_and_SCA
+  - Deploy_to_Azure_App_Service
+  - FoD_DAST
+  jobs:
+  - job: Fortify_Report
+    displayName: 'Generate Fortify Report'
+    pool:
+      vmImage: 'ubuntu-latest'
+    variables:
+    - name: FOD_APP_FROM_SETUP
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_NAME'] ]
+    - name: FOD_RELEASE_FROM_SETUP
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_RELEASE_NAME'] ]
+    - name: FOD_APP_AND_RELEASE_FROM_SETUP
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
+    steps:
+    - checkout: self
+      persistCredentials: "true"
+      clean: "true"
+    - task: Bash@3
+      displayName: 'Install Fortify CLI via @fortify/setup'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
+          npx @fortify/setup@v2 env ado
+    - task: Bash@3
+      displayName: 'Publish Markdown Summary'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        script: |
+          set -euo pipefail
+          echo "Publishing Markdown Summary for release: ${FOD_RELEASE:-}"
+          echo "Logging in to FoD..."
+          fcli fod session login --url "${FOD_URL:-}" --client-id "${FOD_CLIENT_ID:-}" --client-secret "${FOD_CLIENT_SECRET:-}" --fod-session ado-pipeline
+          fcli fod action run release-summary --release "${FOD_RELEASE:-}" -f release-summary.md --fod-session ado-pipeline || true
+          # Upload the summary only if it exists; use absolute path to ensure agent can find it
+          if [ -f release-summary.md ]; then
+            summary_path="$(pwd)/release-summary.md"
+            echo "Found summary at ${summary_path}, uploading to pipeline UI"
+            echo "##vso[task.uploadsummary]${summary_path}"
+          else
+            echo "Warning: release-summary.md not found in $(pwd). Skipping upload."
+          fi
+          echo "Publishing Markdown Summary completed. Logging out..."
+          fcli fod session logout --fod-session ado-pipeline
+      env:
+        FOD_URL: $(FOD_URL)
+        FOD_CLIENT_ID: $(FOD_CLIENT_ID)
+        FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
+        FOD_RELEASE: $(FOD_APP_AND_RELEASE_FROM_SETUP)
+    - task: FortifyReport@17
+      continueOnError: true
+      inputs:
+        providerType: "fod"
+        fodUrl: $(FOD_API_URL)
+        fodApiKey: $(FOD_CLIENT_ID)
+        fodApiSecret: $(FOD_CLIENT_SECRET)
+        #appName: $(FOD_APP_NAME_FROM_SETUP)
+        appName: 'IWA-DotNet [KAL]'
+        #appVersion: $(FOD_RELEASE_FROM_SETUP)
+        appVersion: 'main'
+    - script: echo "DevSecOps Pipeline Complete!"

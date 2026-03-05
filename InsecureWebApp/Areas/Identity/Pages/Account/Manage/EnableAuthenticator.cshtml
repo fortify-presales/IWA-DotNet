@@ -1,0 +1,155 @@
+﻿@page
+@model EnableAuthenticatorModel
+@{
+    ViewData["Title"] = "Configure authenticator app";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+}
+
+<div class="container">
+    <partial name="_StatusMessage" for="StatusMessage" />
+    <h4>@ViewData["Title"]</h4>
+    <div>
+        <p>To use an authenticator app go through the following steps:</p>
+        <ol class="list">
+            <li>
+                <p>
+                    Download a two-factor authenticator app like Microsoft Authenticator for
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> or
+                    Google Authenticator for
+                    <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> and
+                    <a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8">iOS</a>.
+                </p>
+            </li>
+            <li>
+                <p>Scan the QR Code or enter this key <kbd>@Model.SharedKey</kbd> into your two factor authenticator app. Spaces and casing do not matter.</p>
+                <div class="alert alert-info">Learn how to <a href="https://go.microsoft.com/fwlink/?Linkid=852423">enable QR code generation</a>.</div>
+                <div id="qrCode"></div>
+                <div id="qrControls" class="mt-2 mb-2"></div>
+                <div id="qrCodeData" data-url="@Model.AuthenticatorUri" data-key="@Model.SharedKey"></div>
+            </li>
+            <li>
+                <p>
+                    Once you have scanned the QR code or input the key above, your two factor authentication app will provide you
+                    with a unique code. Enter the code in the confirmation box below.
+                </p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form id="send-code" method="post">
+                            <div class="form-group">
+                                <label asp-for="Input.Code" class="control-label">Verification Code</label>
+                                <input asp-for="Input.Code" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="Input.Code" class="text-danger"></span>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Verify</button>
+                            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        </form>
+                    </div>
+                </div>
+            </li>
+        </ol>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        (function () {
+            try {
+                var dataElem = document.getElementById('qrCodeData');
+                if (!dataElem) return;
+                var uri = dataElem.getAttribute('data-url');
+                var qrContainer = document.getElementById('qrCode');
+                if (!uri || !qrContainer) return;
+
+                // Try rendering with qrcodejs first
+                try {
+                    // Clear container
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, {
+                        text: uri,
+                        width: 200,
+                        height: 200,
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    // Add UI controls: copy key and download QR
+                    var controls = document.getElementById('qrControls');
+                    controls.innerHTML = '';
+
+                    var copyBtn = document.createElement('button');
+                    copyBtn.type = 'button';
+                    copyBtn.className = 'btn btn-outline-secondary btn-sm mr-2';
+                    copyBtn.textContent = 'Copy Key';
+                    copyBtn.onclick = function () {
+                        try {
+                            var key = dataElem.getAttribute('data-key') || '';
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(key).then(function(){
+                                    copyBtn.textContent = 'Copied';
+                                    setTimeout(function(){ copyBtn.textContent = 'Copy Key'; }, 1500);
+                                });
+                            } else {
+                                // fallback
+                                var ta = document.createElement('textarea');
+                                ta.value = key; document.body.appendChild(ta); ta.select();
+                                try { document.execCommand('copy'); copyBtn.textContent = 'Copied'; } finally { ta.remove(); setTimeout(function(){ copyBtn.textContent = 'Copy Key'; },1500); }
+                            }
+                        } catch (err) { console && console.warn && console.warn('copy failed', err); }
+                    };
+
+                    var dlBtn = document.createElement('button');
+                    dlBtn.type = 'button';
+                    dlBtn.className = 'btn btn-outline-primary btn-sm';
+                    dlBtn.textContent = 'Download QR';
+                    dlBtn.onclick = function () {
+                        try {
+                            // QRCode library renders an IMG or CANVAS; try to find an img first
+                            var img = qrContainer.querySelector('img');
+                            if (img && img.src) {
+                                var a = document.createElement('a');
+                                a.href = img.src; a.download = 'authenticator-qr.png'; document.body.appendChild(a); a.click(); a.remove();
+                                return;
+                            }
+                            var canvas = qrContainer.querySelector('canvas');
+                            if (canvas) {
+                                var url = canvas.toDataURL('image/png');
+                                var a = document.createElement('a');
+                                a.href = url; a.download = 'authenticator-qr.png'; document.body.appendChild(a); a.click(); a.remove();
+                                return;
+                            }
+                            // fallback: fetch Google Charts image
+                            var fallback = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(uri);
+                            var a2 = document.createElement('a'); a2.href = fallback; a2.target = '_blank'; a2.textContent = 'Open QR in new tab'; controls.appendChild(a2);
+                        } catch (err) { console && console.warn && console.warn('download failed', err); }
+                    };
+
+                    controls.appendChild(copyBtn);
+                    controls.appendChild(dlBtn);
+
+                } catch (e) {
+                    // Fallback to Google Chart API if qrcodejs fails
+                    var img = document.createElement('img');
+                    img.alt = 'QR Code';
+                    img.width = 200;
+                    img.height = 200;
+                    img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(uri);
+                    qrContainer.appendChild(img);
+
+                    // add controls for fallback image
+                    var controls = document.getElementById('qrControls');
+                    controls.innerHTML = '';
+                    var copyBtn = document.createElement('button');
+                    copyBtn.type = 'button'; copyBtn.className = 'btn btn-outline-secondary btn-sm mr-2'; copyBtn.textContent = 'Copy Key';
+                    copyBtn.onclick = function () { try { var key = dataElem.getAttribute('data-key') || ''; navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(key) : (function(){ var ta=document.createElement('textarea'); ta.value=key; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); })(); copyBtn.textContent='Copied'; setTimeout(function(){copyBtn.textContent='Copy Key';},1500);}catch(e){}
+                    };
+                    var dlBtn = document.createElement('a'); dlBtn.className='btn btn-outline-primary btn-sm'; dlBtn.href = img.src; dlBtn.target = '_blank'; dlBtn.textContent = 'Open QR'; controls.appendChild(copyBtn); controls.appendChild(dlBtn);
+                }
+            } catch (ex) {
+                // Non-fatal: don't break the page if QR rendering fails
+                console && console.warn && console.warn('QR render failed', ex);
+            }
+        })();
+    </script>
+}

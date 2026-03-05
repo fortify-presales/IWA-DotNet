@@ -1,12 +1,13 @@
-# Example DevSecOps Pipeline using OpenText Application Security Core
+# Example SAST, DAST ans SCA security using OpenText Application Security Core
 
-name: IWA-DevSecOps
+name: OpenText-AppSec-Core
 
 trigger:
   batch: "true"
   branches:
     include:
     - main
+    - master
     - develop
     - feature/*
     - release/*
@@ -23,6 +24,7 @@ pr:
   branches:
     include:
     - main
+    - master
     - develop
   paths:
     exclude:
@@ -264,15 +266,15 @@ stages:
               archiveType: 'zip'
               archiveFile: '$(Build.ArtifactStagingDirectory)/InsecureWebApp.zip'
               replaceExistingArchive: true
-          - task: AzureWebApp@1
-            displayName: 'Deploy Web App'
-            inputs:
-              azureSubscription: $(AZURE_SERVICE_CONNECTION)
-              appType: 'webAppLinux'
-              appName: 'iwadotnet'
-              package: '$(Build.ArtifactStagingDirectory)/publish'
-              deploymentMethod: 'zipDeploy'
-              startupCommand: 'dotnet InsecureWebApp.dll'
+          #- task: AzureWebApp@1
+          #  displayName: 'Deploy Web App'
+          #  inputs:
+          #    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+          #    appType: 'webAppLinux'
+          #    appName: 'iwadotnet'
+          #    package: '$(Build.ArtifactStagingDirectory)/publish'
+          #    deploymentMethod: 'zipDeploy'
+          #    startupCommand: 'dotnet InsecureWebApp.dll'
 
   #
   # FOD DAST

@@ -146,20 +146,20 @@ stages:
       name: 'Default'
     steps:
     - checkout: self
-    persistCredentials: "true"
-    clean: "true"
+      persistCredentials: "true"
+      clean: "true"
     - task: UseDotNet@2
-    inputs:
+      inputs:
         version: '9.x'
     - task: DotNetCoreCLI@2
-    displayName: 'dotnet build'
-    inputs:
+      displayName: 'dotnet build'
+      inputs:
         command: 'build'
         configuration: 'Debug'
         projects: 'InsecureWebApp/InsecureWebApp.csproj'
     - task: DotNetCoreCLI@2
-    displayName: 'dotnet test'
-    inputs:
+      displayName: 'dotnet test'
+      inputs:
         command: 'test'
         configuration: 'Debug'
         projects: 'InsecureWebAppTests/InsecureWebAppTests.csproj'
@@ -181,28 +181,28 @@ stages:
       name: 'Default'
     variables:
     - name: FOD_RELEASE_FROM_SETUP
-    value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
+      value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
     steps:
     - checkout: self
-    persistCredentials: "true"
-    clean: "true"
+      persistCredentials: "true"
+      clean: "true"
     - task: PowerShell@2
-    displayName: 'Install Fortify CLI via @fortify/setup'
-    inputs:
+      displayName: 'Install Fortify CLI via @fortify/setup'
+      inputs:
         targetType: 'inline'
         workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
-        npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
-        npx @fortify/setup@v2 env ado
+          npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
+          npx @fortify/setup@v2 env ado
     - task: PowerShell@2
-    displayName: 'Run FoD CI Scan'
-    inputs:
+      displayName: 'Run FoD CI Scan'
+      inputs:
         targetType: 'inline'
         workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
-        $ErrorActionPreference = "Stop"
-        fcli action run ci
-    env:
+          $ErrorActionPreference = "Stop"
+          fcli action run ci
+      env:
         FOD_URL: $(FOD_URL)
         FOD_CLIENT_ID: $(FOD_CLIENT_ID)
         FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
@@ -244,21 +244,21 @@ stages:
         deploy:
             steps:
             - checkout: self
-                persistCredentials: "true"
-                clean: "true"
+              persistCredentials: "true"
+              clean: "true"
             - task: UseDotNet@2
-                inputs:
+              inputs:
                 version: '9.x'
             - task: DotNetCoreCLI@2
-                displayName: 'Run dotnet publish'
-                inputs:
+              displayName: 'Run dotnet publish'
+              inputs:
                 command: 'publish'
                 projects: 'InsecureWebApp/InsecureWebApp.csproj'
                 configuration: 'Debug'
                 arguments: '--output $(Build.ArtifactStagingDirectory)/publish'
             - task: ArchiveFiles@2
-                displayName: 'Zip published output'
-                inputs:
+              displayName: 'Zip published output'
+              inputs:
                 rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
                 includeRootFolder: false
                 archiveType: 'zip'

@@ -344,8 +344,8 @@ stages:
   - Deploy_to_Azure_App_Service
   - FoD_DAST
   jobs:
-  - job: Fortify_Report
-    displayName: 'Generate Fortify Report'
+  - job: Fortify_Reports
+    displayName: 'Generate Fortify Reports'
     pool:
       vmImage: 'ubuntu-latest'
     variables:
@@ -393,15 +393,4 @@ stages:
         FOD_CLIENT_ID: $(FOD_CLIENT_ID)
         FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
         FOD_RELEASE: $(FOD_APP_AND_RELEASE_FROM_SETUP)
-    - task: FortifyReport@17
-      continueOnError: true
-      inputs:
-        providerType: "fod"
-        fodUrl: $(FOD_API_URL)
-        fodApiKey: $(FOD_CLIENT_ID)
-        fodApiSecret: $(FOD_CLIENT_SECRET)
-        #appName: $(FOD_APP_NAME_FROM_SETUP)
-        appName: 'IWA-DotNet [KAL]'
-        #appVersion: $(FOD_RELEASE_FROM_SETUP)
-        appVersion: 'main'
     - script: echo "DevSecOps Pipeline Complete!"

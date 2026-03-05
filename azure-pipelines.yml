@@ -84,61 +84,68 @@ stages:
   # Setup: compute and publish variables for other stages
   #
 - stage: Setup
-  displayName: 'Setup'
-  jobs:
-  - job: SetupJob
-    displayName: 'Set Fortify App and Release'
-    pool:
-      #vmImage: 'ubuntu-latest'
-      name: 'Default'
-    steps:
-    - checkout: self
-      persistCredentials: "true"
-      clean: "true"
-    - task: Bash@3
-      name: SetAppAndRelease
-      inputs:
-        targetType: 'inline'
-        script: |
-          set -euo pipefail
-          # Prefer pipeline override variable FORTIFY_APP_NAME if set; fallback to repo name
-          if [ -n "${FORTIFY_APP_NAME_OVERRIDE:-}" ]; then
-            appName="${FORTIFY_APP_NAME_OVERRIDE}${FOD_APP_NAME_POSTFIX:+${FOD_APP_NAME_POSTFIX}}"
-          else
-            appName="${BUILD_REPOSITORY_NAME}${FOD_APP_NAME_POSTFIX:+${FOD_APP_NAME_POSTFIX}}"
-          fi
+displayName: 'Setup'
+jobs:
+- job: SetupJob
+  displayName: 'Set Fortify App and Release'
+  pool:
+    vmImage: 'windows-latest'
+    #name: 'Default'
+  steps:
+  - checkout: self
+    persistCredentials: "true"
+    clean: "true"
+  - task: PowerShell@2
+    name: SetAppAndRelease
+    inputs:
+      targetType: 'inline'
+      script: |
+        $ErrorActionPreference = "Stop"
+          
+        # Prefer pipeline override variable FORTIFY_APP_NAME if set; fallback to repo name
+        if ($env:FORTIFY_APP_NAME_OVERRIDE) {
+          $appName = $env:FORTIFY_APP_NAME_OVERRIDE
+          if ($env:FOD_APP_NAME_POSTFIX) {
+            $appName += $env:FOD_APP_NAME_POSTFIX
+          }
+        } else {
+          $appName = $env:BUILD_REPOSITORY_NAME
+          if ($env:FOD_APP_NAME_POSTFIX) {
+            $appName += $env:FOD_APP_NAME_POSTFIX
+          }
+        }
 
-          # Determine release name: use override if present; otherwise build from PR or branch
-          if [ -n "${FORTIFY_RELEASE_NAME_OVERRIDE:-}" ]; then
-            relName="${FORTIFY_RELEASE_NAME_OVERRIDE}"
-          else
-            if [ "$(Build.Reason)" = "PullRequest" ]; then
-              relName="$(System.PullRequest.PullRequestId)"
-            else
-              relName="$(Build.SourceBranchName)"
-            fi
-          fi
+        # Determine release name: use override if present; otherwise build from PR or branch
+        if ($env:FORTIFY_RELEASE_NAME_OVERRIDE) {
+          $relName = $env:FORTIFY_RELEASE_NAME_OVERRIDE
+        } else {
+          if ($env:BUILD_REASON -eq "PullRequest") {
+            $relName = $env:SYSTEM_PULLREQUEST_PULLREQUESTID
+          } else {
+            $relName = $env:BUILD_SOURCEBRANCHNAME
+          }
+        }
 
-          appAndRelName="${appName}:${relName}"
+        $appAndRelName = "${appName}:${relName}"
 
-          echo "Setting FORTIFY_APP_NAME to ${appName}"
-          echo "Setting FORTIFY_RELEASE_NAME to ${relName}"
-          echo "Setting FORTIFY_APP_AND_RELEASE_NAME to ${appAndRelName}"
-          echo "##vso[task.setvariable variable=FORTIFY_APP_NAME;isOutput=true]${appName}"
-          echo "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME;isOutput=true]${relName}"
-          echo "##vso[task.setvariable variable=FORTIFY_APP_AND_RELEASE_NAME;isOutput=true]${appAndRelName}"
+        Write-Host "Setting FORTIFY_APP_NAME to $appName"
+        Write-Host "Setting FORTIFY_RELEASE_NAME to $relName"
+        Write-Host "Setting FORTIFY_APP_AND_RELEASE_NAME to $appAndRelName"
+        Write-Host "##vso[task.setvariable variable=FORTIFY_APP_NAME;isOutput=true]$appName"
+        Write-Host "##vso[task.setvariable variable=FORTIFY_RELEASE_NAME;isOutput=true]$relName"
+        Write-Host "##vso[task.setvariable variable=FORTIFY_APP_AND_RELEASE_NAME;isOutput=true]$appAndRelName"
 
   #
   # Build and Unit Test the application components
   #
 - stage: Build_And_Unit_Test
-  displayName: 'Build and Unit Test'
-  condition: and(succeeded(), eq(variables['BUILD_AND_UNIT_TEST'], 'true'))
-  jobs:
-  - job: Build
-    pool:
-     #vmImage: 'ubuntu-latest'
-     name: 'Default'
+displayName: 'Build and Unit Test'
+condition: and(succeeded(), eq(variables['BUILD_AND_UNIT_TEST'], 'true'))
+jobs:
+- job: Build
+  pool:
+    vmImage: 'windows-latest'
+    #name: 'Default'
     steps:
     - checkout: self
       persistCredentials: "true"
@@ -155,8 +162,8 @@ stages:
   - job: UnitTest
     dependsOn: Build
     pool:
-     #vmImage: 'ubuntu-latest'
-     name: 'Default'
+      vmImage: 'windows-latest'
+      #name: 'Default'
     steps:
     - checkout: self
       persistCredentials: "true"
@@ -175,17 +182,17 @@ stages:
   # FoD SAST and SCA
   #  
 - stage: FoD_SAST_and_SCA
-  displayName: 'FoD SAST and SCA'
-  condition: and(succeeded(), eq(variables['USE_FOD_SAST'], 'true'))
-  dependsOn:
-  - Setup
-  - Build_And_Unit_Test 
-  jobs:
-  - job: Fortify_CLI_Scan
-    displayName: 'Run FOD SAST and SCA Scan via Fortify CLI'
-    pool:
-      #vmImage: 'ubuntu-latest'
-      name: 'Default'
+displayName: 'FoD SAST and SCA'
+condition: and(succeeded(), eq(variables['USE_FOD_SAST'], 'true'))
+dependsOn:
+- Setup
+- Build_And_Unit_Test 
+jobs:
+- job: Fortify_CLI_Scan
+  displayName: 'Run FOD SAST and SCA Scan via Fortify CLI'
+  pool:
+    vmImage: 'windows-latest'
+    #name: 'Default'
     variables:
     - name: FOD_RELEASE_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
@@ -193,21 +200,21 @@ stages:
     - checkout: self
       persistCredentials: "true"
       clean: "true"
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Install Fortify CLI via @fortify/setup'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
           npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
           npx @fortify/setup@v2 env ado
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Run FoD CI Scan'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
-          set -euo pipefail
+          $ErrorActionPreference = "Stop"
           fcli action run ci
       env:
         FOD_URL: $(FOD_URL)
@@ -233,19 +240,19 @@ stages:
   # Deploy to Azure App Service
   #
 - stage: Deploy_to_Azure_App_Service
+displayName: 'Deploy to Azure App Service'
+condition: and(succeeded(), eq(variables['DEPLOY_TO_AZURE'], 'true'), eq(variables['Build.SourceBranchName'], 'main'))
+dependsOn:
+- Setup
+- Build_And_Unit_Test
+- FoD_SAST_and_SCA
+jobs:
+- deployment: Deploy
   displayName: 'Deploy to Azure App Service'
-  condition: and(succeeded(), eq(variables['DEPLOY_TO_AZURE'], 'true'), eq(variables['Build.SourceBranchName'], 'main'))
-  dependsOn:
-  - Setup
-  - Build_And_Unit_Test
-  - FoD_SAST_and_SCA
-  jobs:
-  - deployment: Deploy
-    displayName: 'Deploy to Azure App Service'
-    environment: 'development'
-    pool:
-     #vmImage: 'ubuntu-latest'
-     name: 'Default'
+  environment: 'development'
+  pool:
+    vmImage: 'windows-latest'
+    #name: 'Default'
     strategy:
       runOnce:
         deploy:
@@ -303,8 +310,8 @@ stages:
   - job: Fortify_CLI_DAST_Scan
     displayName: 'Run FoD DAST Scan via Fortify CLI'
     pool:
-      #vmImage: 'ubuntu-latest'
-      name: 'Default'
+      vmImage: 'windows-latest'
+      #name: 'Default'
     variables:
     - name: FOD_RELEASE_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
@@ -312,29 +319,29 @@ stages:
     - checkout: self
       persistCredentials: "true"
       clean: "true"
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Install Fortify CLI via @fortify/setup'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
           npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
           npx @fortify/setup@v2 env ado
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Run FoD DAST Scan'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
-          set -euo pipefail
-          echo "Running FoD DAST Scan for release: ${FOD_RELEASE:-}"
-          echo "Logging in to FoD..."
-          fcli fod session login --url "${FOD_URL:-}" --client-id "${FOD_CLIENT_ID:-}" --client-secret "${FOD_CLIENT_SECRET:-}" --fod-session ado-pipeline
-          echo "Starting DAST scan for release: ${FOD_RELEASE:-}"
-          fcli fod dast-scan start --release "${FOD_RELEASE:-}" --in-progress "Queue" --store curScan --fod-session ado-pipeline
-          sleep 10
+          $ErrorActionPreference = "Stop"
+          Write-Host "Running FoD DAST Scan for release: $env:FOD_RELEASE"
+          Write-Host "Logging in to FoD..."
+          fcli fod session login --url "$env:FOD_URL" --client-id "$env:FOD_CLIENT_ID" --client-secret "$env:FOD_CLIENT_SECRET" --fod-session ado-pipeline
+          Write-Host "Starting DAST scan for release: $env:FOD_RELEASE"
+          fcli fod dast-scan start --release "$env:FOD_RELEASE" --in-progress "Queue" --store curScan --fod-session ado-pipeline
+          Start-Sleep -Seconds 10
           fcli fod dast-scan wait-for ::curScan:: --fod-session ado-pipeline
-          echo "DAST scan completed. Logging out..."
+          Write-Host "DAST scan completed. Logging out..."
           fcli fod session logout --fod-session ado-pipeline
       env:
         FOD_URL: $(FOD_URL)
@@ -355,8 +362,8 @@ stages:
   - job: Fortify_Reports
     displayName: 'Generate Fortify Reports'
     pool:
-      #vmImage: 'ubuntu-latest'
-      name: 'Default'
+      vmImage: 'windows-latest'
+      #name: 'Default'
     variables:
     - name: FOD_APP_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_NAME'] ]
@@ -368,34 +375,34 @@ stages:
     - checkout: self
       persistCredentials: "true"
       clean: "true"
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Install Fortify CLI via @fortify/setup'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
           npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
           npx @fortify/setup@v2 env ado
-    - task: Bash@3
+    - task: PowerShell@2
       displayName: 'Publish Markdown Summary'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(Build.SourcesDirectory)/InsecureWebApp'
+        workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
-          set -euo pipefail
-          echo "Publishing Markdown Summary for release: ${FOD_RELEASE:-}"
-          echo "Logging in to FoD..."
-          fcli fod session login --url "${FOD_URL:-}" --client-id "${FOD_CLIENT_ID:-}" --client-secret "${FOD_CLIENT_SECRET:-}" --fod-session ado-pipeline
-          fcli fod action run release-summary --release "${FOD_RELEASE:-}" -f release-summary.md --fod-session ado-pipeline || true
+          $ErrorActionPreference = "Stop"
+          Write-Host "Publishing Markdown Summary for release: $env:FOD_RELEASE"
+          Write-Host "Logging in to FoD..."
+          fcli fod session login --url "$env:FOD_URL" --client-id "$env:FOD_CLIENT_ID" --client-secret "$env:FOD_CLIENT_SECRET" --fod-session ado-pipeline
+          fcli fod action run release-summary --release "$env:FOD_RELEASE" -f release-summary.md --fod-session ado-pipeline -ErrorAction SilentlyContinue
           # Upload the summary only if it exists; use absolute path to ensure agent can find it
-          if [ -f release-summary.md ]; then
-            summary_path="$(pwd)/release-summary.md"
-            echo "Found summary at ${summary_path}, uploading to pipeline UI"
-            echo "##vso[task.uploadsummary]${summary_path}"
-          else
-            echo "Warning: release-summary.md not found in $(pwd). Skipping upload."
-          fi
-          echo "Publishing Markdown Summary completed. Logging out..."
+          if (Test-Path release-summary.md) {
+            $summaryPath = Join-Path (Get-Location) "release-summary.md"
+            Write-Host "Found summary at $summaryPath, uploading to pipeline UI"
+            Write-Host "##vso[task.uploadsummary]$summaryPath"
+          } else {
+            Write-Host "Warning: release-summary.md not found in $(Get-Location). Skipping upload."
+          }
+          Write-Host "Publishing Markdown Summary completed. Logging out..."
           fcli fod session logout --fod-session ado-pipeline
       env:
         FOD_URL: $(FOD_URL)

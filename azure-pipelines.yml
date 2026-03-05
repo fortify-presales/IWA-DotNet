@@ -89,7 +89,8 @@ stages:
   - job: SetupJob
     displayName: 'Set Fortify App and Release'
     pool:
-      vmImage: 'ubuntu-latest'
+      #vmImage: 'ubuntu-latest'
+      name: 'Default'
     steps:
     - checkout: self
       persistCredentials: "true"
@@ -136,7 +137,8 @@ stages:
   jobs:
   - job: Build
     pool:
-     vmImage: 'ubuntu-latest'
+     #vmImage: 'ubuntu-latest'
+     name: 'Default'
     steps:
     - checkout: self
       persistCredentials: "true"
@@ -153,7 +155,8 @@ stages:
   - job: UnitTest
     dependsOn: Build
     pool:
-     vmImage: 'ubuntu-latest'
+     #vmImage: 'ubuntu-latest'
+     name: 'Default'
     steps:
     - checkout: self
       persistCredentials: "true"
@@ -181,7 +184,8 @@ stages:
   - job: Fortify_CLI_Scan
     displayName: 'Run FOD SAST and SCA Scan via Fortify CLI'
     pool:
-      vmImage: 'ubuntu-latest'
+      #vmImage: 'ubuntu-latest'
+      name: 'Default'
     variables:
     - name: FOD_RELEASE_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
@@ -240,7 +244,8 @@ stages:
     displayName: 'Deploy to Azure App Service'
     environment: 'development'
     pool:
-     vmImage: 'ubuntu-latest'
+     #vmImage: 'ubuntu-latest'
+     name: 'Default'
     strategy:
       runOnce:
         deploy:
@@ -298,7 +303,8 @@ stages:
   - job: Fortify_CLI_DAST_Scan
     displayName: 'Run FoD DAST Scan via Fortify CLI'
     pool:
-      vmImage: 'ubuntu-latest'
+      #vmImage: 'ubuntu-latest'
+      name: 'Default'
     variables:
     - name: FOD_RELEASE_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_AND_RELEASE_NAME'] ]
@@ -349,7 +355,8 @@ stages:
   - job: Fortify_Reports
     displayName: 'Generate Fortify Reports'
     pool:
-      vmImage: 'ubuntu-latest'
+      #vmImage: 'ubuntu-latest'
+      name: 'Default'
     variables:
     - name: FOD_APP_FROM_SETUP
       value: $[ stageDependencies.Setup.SetupJob.outputs['SetAppAndRelease.FORTIFY_APP_NAME'] ]

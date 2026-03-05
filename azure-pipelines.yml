@@ -379,7 +379,7 @@ stages:
           Write-Host "Publishing Markdown Summary for release: $env:FOD_RELEASE"
           Write-Host "Logging in to FoD..."
           fcli fod session login --url "$env:FOD_URL" --client-id "$env:FOD_CLIENT_ID" --client-secret "$env:FOD_CLIENT_SECRET" --fod-session ado-pipeline
-          fcli fod action run release-summary --release "$env:FOD_RELEASE" -f release-summary.md --fod-session ado-pipeline -ErrorAction SilentlyContinue
+          fcli fod action run release-summary --release "$env:FOD_RELEASE" -f release-summary.md --fod-session ado-pipeline
           # Upload the summary only if it exists; use absolute path to ensure agent can find it
           if (Test-Path release-summary.md) {
             $summaryPath = Join-Path (Get-Location) "release-summary.md"

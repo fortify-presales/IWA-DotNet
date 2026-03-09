@@ -1,4 +1,4 @@
-﻿[![Build Status](https://dev.azure.com/fortify-presales/IWA-DotNet/_apis/build/status%2FIWA-DotNet?branchName=main)](https://dev.azure.com/fortify-presales/IWA-DotNet/_build/latest?definitionId=17&branchName=main)
+﻿[![Build Status](https://dev.azure.com/opentext-appsec/IWA-DotNet/_apis/build/status%2FIWA-DotNet?branchName=master)](https://dev.azure.com/opentext-appsec/IWA-DotNet/_build/latest?definitionId=2&branchName=master)
 
 # IWA.NET Pharmacy Direct
 
@@ -29,7 +29,8 @@
 _IWA.NET Pharmacy Direct_ is an insecure Microsoft.NET Web Application for use in **DevSecOps** scenarios and demonstrations.
 It includes some examples of bad and insecure code - which can be found using static and dynamic application
 security testing tools such as [OpenText Application Security](https://www.opentext.com/en-gb/products/application-security).
-
+ 
+This project targets .NET 9 (`net9.0`).
 The application is intended to provide the functionality of a typical "online pharmacy", including purchasing Products (medication)
 and requesting Services (prescriptions, health checks etc). It has a modern-ish HTML front end (with some JavaScript) and a Swagger based API.
 
@@ -46,8 +47,12 @@ by clicking on the "Fork" button at the top right.
 
 ## Pre-Requisites
 
- - [Microsoft.NET 8.0 SDK](https://dotnet.microsoft.com/en-US/download/dotnet/8.0)
- - [Visual Studio Code](https://code.visualstudio.com/download) or [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/vs/community/)
+ - [Microsoft.NET 9.0 SDK](https://dotnet.microsoft.com/en-US/download/dotnet/9.0)
+ - Visual Studio 2022 (update to the latest release) with the **ASP.NET and web development** workload — recommended for the full debugging and tooling experience.
+ - Visual Studio Code with the **C#** (OmniSharp) extension and the `.NET` workload installed — lightweight alternative that works with the `dotnet` CLI.
+
+Ensure your IDE is updated to support .NET 9 (install recent updates or extensions as needed).
+
  - (Optional) SQL Server Express 2019 including SQL Server LocalDB
  - (Optional) [OpenText Static Application Security Testing](https://www.opentext.com/en-gb/products/static-application-security-testing) local install
  - (Optional) [Fortify command line (fcli) tool](https://github.com/fortify/fcli)
@@ -98,7 +103,6 @@ There is an example powershell script in the top level directory that you can us
 via [OpenText Static Application Security Testing](https://www.opentext.com/en-gb/products/static-application-security-testing).
 
 ```Cmd
-cd InsecureWebApp
 ./scan.ps1
 ```
 

@@ -371,10 +371,9 @@ FodyWeavers.xsd
 /etc/commands.txt
 /InsecureWebApp/email-db.json
 /fod.zip
+/fortifypackage.zip
 /FoDPackage.zip
 *.env
-/package.ip.zip
-/IWA-DotNet.KAL.zip
 /InsecureWebApp/package.zip
 /InsecureWebApp/Files/Order.file
 /InsecureShippingService/packages.lock.json
@@ -382,3 +381,6 @@ FodyWeavers.xsd
 /InsecureWebApp/database.dat
 /InsecureWebApp/database.dat-shm
 /InsecureWebApp/database.dat-wal
+
+**/local-libs/**
+aviator_token.txt

@@ -1,0 +1,12 @@
+<Project>
+  <Target Name="CopyResolvedAssemblies" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ResolvedFiles Include="@(ReferenceCopyLocalPaths)" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(ResolvedFiles)"
+      DestinationFolder="$(MSBuildProjectDirectory)\local-libs\%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

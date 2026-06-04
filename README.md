@@ -12,13 +12,13 @@
 *   [Application Security Testing Integrations](#application-security-testing-integrations)
     * [SAST using OpenText Static Application Security Testing Command Line](#sast-using-opentext-static-application-security-testing-command-line)
     * [SAST using OpenText ScanCentral SAST](#sast-using-opentext-scancentral-sast)
-    * [SAST using OpenText Core Application Security](#sast-using-opentext-core-application-security)
+    * [SAST using OpenText Fortify on Demand](#sast-using-opentext-core-application-security)
     * [DAST using OpenText DAST](#dast-using-opentext-dast)
     * [DAST using OpenText ScanCentral DAST](#dast-using-opentext-scancentral-dast)
-    * [DAST using OpenText Core Application Security](#dast-using-opentext-core-application-security)
+    * [DAST using OpenText Fortify on Demand](#dast-using-opentext-core-application-security)
     * [API Security Testing using OpenText DAST and Postman](#api-security-testing-using-opentext-dast-and-postman)
     * [API Security Testing using OpenText ScanCentral DAST](#api-security-testing-using-opentext-scancentral-dast)
-    * [Open Source Software Composition Analysis using OpenText Core SCA](#open-source-software-composition-analysis-using-opentext-core-sca)
+    * [Open Source Software Composition Analysis using OpenText Fortify SCA](#open-source-software-composition-analysis-using-opentext-core-sca)
 *   [Build and Pipeline Integrations](#build-and-pipeline-integrations)
     * [Azure DevOps Pipeline](#azure-devops-pipelines)
 *   [Developing and Contributing](#developing-and-contributing)
@@ -56,7 +56,7 @@ Ensure your IDE is updated to support .NET 9 (install recent updates or extensio
  - (Optional) SQL Server Express 2019 including SQL Server LocalDB
  - (Optional) [OpenText Static Application Security Testing](https://www.opentext.com/en-gb/products/static-application-security-testing) local install
  - (Optional) [Fortify command line (fcli) tool](https://github.com/fortify/fcli)
- - (Optional) [OpenText Core SCA CLI](https://github.com/debricked/cli)
+ - (Optional) [OpenText Fortify SCA CLI](https://github.com/debricked/cli)
 
 ## Building the Application
 
@@ -125,20 +125,20 @@ scancentral -url _SCANCENTRAL_CTRL_URL_ start -upload -uptoken _CI_TOKEN_ --buil
 ```
 
 where `_SCANCENTRAL_CTRL_URL_` and `_CI_TOKEN_` are the ScanCentral SAST Controller URL and the value of a CIToken you have created in the OpenText 
-Core Application Security UI, and `_YOUR_APP_` and `_YOUR_APP_VERSION_` is the Application and Version name you are running the scan for.
+Fortify on Demand UI, and `_YOUR_APP_` and `_YOUR_APP_VERSION_` is the Application and Version name you are running the scan for.
 
-### SAST using OpenText Core Application Security
+### SAST using OpenText Fortify on Demand
 
-To execute an [OpenText Core Application Security](https://www.opentext.com/en-gb/products/saas/core-application-security) 
+To execute an [OpenText Fortify on Demand](https://www.opentext.com/en-gb/products/saas/core-application-security) 
 SAST scan you need to package and upload the source code. 
 To package the code into a Zip file for uploading you can use the `scancentral` command utility as following:
 
 ```Cmd
 cd InsecureWebApp
-scancentral package -bt dotnet -bf .\InsecureWebApp.csproj
+scancentral package -bt dotnet -bf .\InsecureWebApp.csproj -oss
 ```
 
-You can then upload this manually using the OpenText Core Application Security UI or alternately you can use the 
+You can then upload this manually using the OpenText Fortify on Demand UI or alternately you can use the 
 [fcli](https://github.com/fortify/fcli) tool to upload this Zip file and start a scan using the following:
 
 ```Cmd
@@ -148,7 +148,7 @@ fcli fod sast-scan wait-for ::curScan::
 ``` 
 
 where `_FOD_CLIENT_ID_` and `_FOD_CLIENT_SECRET_` are the values of an API Key and Secret you have created in the OpenText 
-Core Application Security UI, and `_YOUR_APP_` and `_YOUR_REL_` is the Application and Release name you are running the scan for.
+Fortify on Demand UI, and `_YOUR_APP_` and `_YOUR_REL_` is the Application and Release name you are running the scan for.
 
 ### DAST using OpenText DAST
 
@@ -169,7 +169,7 @@ PDF report from using `ReportGenerator`). You could also upload it to the OpenTe
 
 TBD
 
-### DAST using OpenText Core Application Security
+### DAST using OpenText Fortify on Demand
 
 TBD
 
@@ -181,24 +181,24 @@ TBD
 
 TBD
 
-### Open Source Software Composition Analysis using OpenText Core SCA
+### Open Source Software Composition Analysis using OpenText Fortify SCA
 
-To carry out an OpenText Core SCA scan using the [CLI](https://github.com/debricked/cli) carry out the following from a command prompt:
+To carry out an OpenText Fortify SCA (Debricked) scan using the [CLI](https://github.com/debricked/cli) carry out the following from a command prompt:
 
 ```Cmd
 cd InsecureWebApp
 debricked scan . -e "*\**.lock" -e "**\node_modules\**" -r _DEBRICKED_REPO_ -t _DEBRICKED_TOKEN_ --generate-commit-name
 ```
 
-where `_DEBRICKED_REPO_` is the name of the repository you want represented in OpenText Core SCA UI and 
-`_DEBRICKED_TOKEN_` is your OpenText Core SCA [access token](https://docs.debricked.com/product/administration/generate-access-token).
+where `_DEBRICKED_REPO_` is the name of the repository you want represented in OpenText Fortify SCA UI and 
+`_DEBRICKED_TOKEN_` is your OpenText Fortify SCA [access token](https://docs.debricked.com/product/administration/generate-access-token).
 
 ## Build and Pipeline Integrations
 
 ### Azure DevOps Pipeline
 
 An Azure DevOps pipeline [azure-pipelines.yml](azure-pipelines.yml) is provided that shows
-an example pipeline for SAST, DAST and SCA scanning using [OpenText Core Application Security](https://www.opentext.com/en-gb/products/saas/core-application-security)
+an example pipeline for SAST, DAST and SCA scanning using [OpenText Fortify on Demand](https://www.opentext.com/en-gb/products/saas/core-application-security)
 
 ## Licensing
 

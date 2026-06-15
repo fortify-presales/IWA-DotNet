@@ -195,32 +195,46 @@ stages:
           npx @fortify/setup@v2 env init --tools=fcli:bootstrapped
           npx @fortify/setup@v2 env ado
     - task: PowerShell@2
-      displayName: 'Run FoD CI Scan'
-      inputs:
+      displayName: 'Run FoD CI Scan (PR)'
+      condition: eq(variables['Build.Reason'], 'PullRequest')
+      inputs: &fortifyScanInputs
         targetType: 'inline'
         workingDirectory: '$(Build.SourcesDirectory)\InsecureWebApp'
         script: |
           $ErrorActionPreference = "Stop"
           fcli action run ci
       env:
-        FOD_URL: $(FOD_URL)
-        FOD_CLIENT_ID: $(FOD_CLIENT_ID)
-        FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
-        FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
-        COPY_FROM_RELEASE: "$(FOD_PARENT_RELEASE)"
-        SAST_ASSESSMENT_TYPE: "$(FOD_DEFAULT_ASSESSMENT_TYPE)"
-        SETUP_EXTRA_OPTS: '--sdlc-status Development --app-owner "$(FOD_DEFAULT_OWNER)"'
-        PACKAGE_EXTRA_OPTS: "-bt dotnet -bf InsecureWebApp.csproj"
-        DO_SETUP: true
-        DO_SAST_SCAN: true
-        DO_AVIATOR_AUDIT: true
-        DO_SCA_SCAN: true
-        DO_WAIT: true
-        SAST_WAIT_EXTRA_OPTS: --timeout 2h
-        DO_POLICY_CHECK: false  # we will do policy check in a separate job after DAST scan
-        DO_JOB_SUMMARY: true
+        <<: &fortifyScanCommonEnv
+          FOD_URL: $(FOD_URL)
+          FOD_CLIENT_ID: $(FOD_CLIENT_ID)
+          FOD_CLIENT_SECRET: $(FOD_CLIENT_SECRET)
+          FOD_RELEASE: $(FOD_RELEASE_FROM_SETUP)
+          COPY_FROM_RELEASE: "$(FOD_PARENT_RELEASE)"
+          SAST_ASSESSMENT_TYPE: "$(FOD_DEFAULT_ASSESSMENT_TYPE)"
+          SETUP_EXTRA_OPTS: '--sdlc-status Development --app-owner "$(FOD_DEFAULT_OWNER)"'
+          PACKAGE_EXTRA_OPTS: "-bt dotnet -bf InsecureWebApp.csproj"
+          DO_SETUP: true
+          DO_SAST_SCAN: true
+          DO_AVIATOR_AUDIT: true
+          DO_SCA_SCAN: true
+          DO_WAIT: true
+          SAST_WAIT_EXTRA_OPTS: --timeout 2h
+          DO_JOB_SUMMARY: true
+          DO_EXPORT: true
+        DO_POLICY_CHECK: true
         DO_PR_COMMENT: true
-        DO_EXPORT: true
+        PR_COMMENT_ACTION: etc/ado-pr-comment.yaml  # ADO PR comment action to use for reporting results in pull requests
+        PR_COMMENT_EXTRA_OPTS: --on-unsigned=ignore
+        CHECK_POLICY_ACTION: etc/check-pr-policy.yaml
+        CHECK_POLICY_EXTRA_OPTS: --on-unsigned=ignore --scan-types Static
+    - task: PowerShell@2
+      displayName: 'Run FoD CI Scan'
+      condition: ne(variables['Build.Reason'], 'PullRequest')
+      inputs: *fortifyScanInputs
+      env:
+        <<: *fortifyScanCommonEnv
+        DO_POLICY_CHECK: false  # we will do policy check in a separate job after DAST scan
+        DO_PR_COMMENT: false
 
 #
 # Deploy to Azure App Service
